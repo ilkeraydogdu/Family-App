@@ -178,6 +178,7 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
             ),
             const SizedBox(height: 12),
             TextField(
+              key: const ValueKey('block_title_field'),
               controller: _titleController,
               decoration: const InputDecoration(
                 labelText: 'Plan / Ders / Rutin Başlığı (Örn: Gitar Dersi)',
@@ -187,6 +188,7 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
             ),
             const SizedBox(height: 10),
             TextField(
+              key: const ValueKey('block_desc_field'),
               controller: _descController,
               decoration: const InputDecoration(
                 labelText: 'Açıklama / Detay',
@@ -388,18 +390,23 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<int>(
+                      isExpanded: true,
                       initialValue: _remindBeforeMinutes,
                       decoration: const InputDecoration(
                         labelText: 'Kaç dk kala?',
                         border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 5, child: Text('5 dk kala')),
-                        DropdownMenuItem(value: 10, child: Text('10 dk kala')),
-                        DropdownMenuItem(value: 15, child: Text('15 dk kala')),
-                        DropdownMenuItem(value: 20, child: Text('20 dk kala')),
-                        DropdownMenuItem(value: 30, child: Text('30 dk kala')),
-                        DropdownMenuItem(value: 45, child: Text('45 dk kala')),
+                        DropdownMenuItem(value: 5, child: Text('5 dk')),
+                        DropdownMenuItem(value: 10, child: Text('10 dk')),
+                        DropdownMenuItem(value: 15, child: Text('15 dk')),
+                        DropdownMenuItem(value: 20, child: Text('20 dk')),
+                        DropdownMenuItem(value: 30, child: Text('30 dk')),
+                        DropdownMenuItem(value: 45, child: Text('45 dk')),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -411,10 +418,15 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<int>(
+                      isExpanded: true,
                       initialValue: _repeatCount,
                       decoration: const InputDecoration(
-                        labelText: 'Tekrar Sayısı',
+                        labelText: 'Tekrar',
                         border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
                       ),
                       items: const [
                         DropdownMenuItem(value: 1, child: Text('1 kez')),
@@ -431,16 +443,21 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<int>(
+                      isExpanded: true,
                       initialValue: _repeatIntervalMinutes,
                       decoration: const InputDecoration(
-                        labelText: 'Tekrar Aralığı',
+                        labelText: 'Aralık',
                         border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 2, child: Text('2 dk ara')),
-                        DropdownMenuItem(value: 3, child: Text('3 dk ara')),
-                        DropdownMenuItem(value: 5, child: Text('5 dk ara')),
-                        DropdownMenuItem(value: 10, child: Text('10 dk ara')),
+                        DropdownMenuItem(value: 2, child: Text('2 dk')),
+                        DropdownMenuItem(value: 3, child: Text('3 dk')),
+                        DropdownMenuItem(value: 5, child: Text('5 dk')),
+                        DropdownMenuItem(value: 10, child: Text('10 dk')),
                       ],
                       onChanged: (val) {
                         if (val != null) {

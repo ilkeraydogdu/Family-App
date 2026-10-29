@@ -53,15 +53,18 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                         Icon(
                           Icons.phonelink_lock,
                           color: Colors.amber,
-                          size: 18,
+                          size: 16,
                         ),
-                        SizedBox(width: 8),
-                        Text(
-                          'TELEFON KULLANIM DIŞI • SADECE ARAMALAR AÇIK',
-                          style: TextStyle(
-                            color: Colors.amber,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'TELEFON KULLANIM DIŞI • SADECE ARAMALAR AÇIK',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       ],

@@ -143,17 +143,20 @@ class _HomeShellViewState extends State<HomeShellView> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      vm.familyProfile.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                    Flexible(
+                      child: Text(
+                        vm.familyProfile.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
+                        horizontal: 6,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
@@ -161,15 +164,16 @@ class _HomeShellViewState extends State<HomeShellView> {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        'Kod: ${vm.familyProfile.inviteCode}',
-                        style: const TextStyle(fontSize: 11),
+                        vm.familyProfile.inviteCode,
+                        style: const TextStyle(fontSize: 10),
                       ),
                     ),
                   ],
                 ),
                 Text(
                   'Uyanış: ${vm.familyProfile.wakeUpTime} • Uyku: ${vm.familyProfile.sleepTime} • ${vm.familyProfile.city}',
-                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, color: Colors.white70),
                 ),
               ],
             ),
@@ -251,15 +255,12 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                       ),
                     Expanded(
-                      child: IndexedStack(
-                        index: _selectedTabIndex,
-                        children: [
-                          _buildDailyTimelineTab(),
-                          _buildCoupleComparisonTab(),
-                          _buildFocusLockdownTab(),
-                          _buildStatsAndTrackingTab(),
-                        ],
-                      ),
+                      child: switch (_selectedTabIndex) {
+                        0 => _buildDailyTimelineTab(),
+                        1 => _buildCoupleComparisonTab(),
+                        2 => _buildFocusLockdownTab(),
+                        _ => _buildStatsAndTrackingTab(),
+                      },
                     ),
                   ],
                 ),
@@ -322,31 +323,36 @@ class _HomeShellViewState extends State<HomeShellView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.mosque,
-                        color: Colors.amberAccent,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Canlı Namaz Vakitleri (${p.city})',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.mosque,
+                          color: Colors.amberAccent,
+                          size: 18,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Canlı Namaz Vakitleri (${p.city})',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   InkWell(
                     onTap: vm.syncAllWithLivePrayerTimes,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
+                        horizontal: 8,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
@@ -355,11 +361,12 @@ class _HomeShellViewState extends State<HomeShellView> {
                         border: Border.all(color: Colors.amberAccent),
                       ),
                       child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.sync, color: Colors.amberAccent, size: 14),
+                          Icon(Icons.sync, color: Colors.amberAccent, size: 13),
                           SizedBox(width: 4),
                           Text(
-                            'Saatleri Vakte Hizala',
+                            'Vakte Hizala',
                             style: TextStyle(
                               color: Colors.amberAccent,
                               fontSize: 11,
@@ -535,21 +542,24 @@ class _HomeShellViewState extends State<HomeShellView> {
                   ),
                 ),
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    block.statusLabel,
-                    style: TextStyle(
-                      color: statusText,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      block.statusLabel,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: statusText,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                 ),
