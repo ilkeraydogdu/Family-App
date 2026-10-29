@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_svg_icons.dart';
+
 class PhoneLockdownShieldView extends StatefulWidget {
   final String reasonTitle;
   final VoidCallback onExitLockdown;
@@ -41,42 +43,43 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.15),
+                      color: const Color(0xFF1E293B),
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
-                        color: Colors.amber.withValues(alpha: 0.5),
+                        color: const Color(0xFF38BDF8).withValues(alpha: 0.4),
                       ),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.phonelink_lock,
-                          color: Colors.amber,
+                        AppSvgIcon(
+                          svgData: AppSvgs.shieldLock,
+                          color: Color(0xFF38BDF8),
                           size: 16,
                         ),
-                        SizedBox(width: 6),
+                        SizedBox(width: 8),
                         Flexible(
                           child: Text(
                             'TELEFON KULLANIM DIŞI • SADECE ARAMALAR AÇIK',
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF38BDF8),
+                              fontWeight: FontWeight.w700,
                               fontSize: 11,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 36),
                   Text(
                     timeStr,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 68,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w300,
                       letterSpacing: 2,
                     ),
                   ),
@@ -85,17 +88,21 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                     widget.reasonTitle,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Belirlediğiniz saat aralığında sosyal medya ve bildirimler kısıtlandı. '
-                    'Yalnızca gelen telefon aramalarına cevap verebilir veya eşinizi arayabilirsiniz.',
+                    'Belirlediğiniz saat aralığında sosyal medya ve uygulama bildirimleri kısıtlandı. '
+                    'Yalnızca gelen telefon aramalarına cevap verebilir veya acil durumda eşinizi arayabilirsiniz.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                    style: TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 13.5,
+                      height: 1.45,
+                    ),
                   ),
                 ],
               ),
@@ -104,29 +111,37 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.greenAccent, width: 1.5),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFF10B981),
+                      width: 1.5,
+                    ),
                   ),
                   child: Column(
                     children: [
-                      const CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.green,
-                        child: Icon(
-                          Icons.phone_in_talk,
-                          color: Colors.white,
-                          size: 30,
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const AppSvgIcon(
+                          svgData: AppSvgs.phoneCall,
+                          color: Color(0xFF34D399),
+                          size: 26,
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         _inActiveCall
                             ? 'Eşim ile Görüşme Devam Ediyor...'
-                            : 'Gelen Arama: Eşim ❤️',
+                            : 'Gelen Arama: Eşim (Aile Hattı)',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -134,7 +149,10 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                         _inActiveCall
                             ? 'Kısıtlama modunda sesli arama izni aktif'
                             : 'Gelen aramaya izin verildi',
-                        style: const TextStyle(color: Colors.white70),
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -143,22 +161,32 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                           if (!_inActiveCall)
                             FilledButton.icon(
                               style: FilledButton.styleFrom(
-                                backgroundColor: Colors.green,
+                                backgroundColor: const Color(0xFF10B981),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                               onPressed: () =>
                                   setState(() => _inActiveCall = true),
-                              icon: const Icon(Icons.call),
+                              icon: const AppSvgIcon(
+                                svgData: AppSvgs.phoneCall,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                               label: const Text('Cevapla'),
                             ),
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: Colors.redAccent,
+                              backgroundColor: const Color(0xFFEF4444),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             onPressed: () => setState(() {
                               _hasSimulatedIncomingCall = false;
                               _inActiveCall = false;
                             }),
-                            icon: const Icon(Icons.call_end),
+                            icon: const Icon(Icons.call_end, size: 18),
                             label: Text(_inActiveCall ? 'Bitir' : 'Reddet'),
                           ),
                         ],
@@ -171,16 +199,23 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                   children: [
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.greenAccent,
-                        side: const BorderSide(color: Colors.greenAccent),
+                        foregroundColor: const Color(0xFF34D399),
+                        side: const BorderSide(color: Color(0xFF10B981)),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 14,
                         ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       onPressed: () =>
                           setState(() => _hasSimulatedIncomingCall = true),
-                      icon: const Icon(Icons.ring_volume),
+                      icon: const AppSvgIcon(
+                        svgData: AppSvgs.phoneCall,
+                        color: Color(0xFF34D399),
+                        size: 18,
+                      ),
                       label: const Text(
                         'Gelen Arama Geldiğinde Nasıl Görünür? (Test Et)',
                       ),
@@ -191,10 +226,14 @@ class _PhoneLockdownShieldViewState extends State<PhoneLockdownShieldView> {
                 children: [
                   TextButton.icon(
                     onPressed: widget.onExitLockdown,
-                    icon: const Icon(Icons.lock_open, color: Colors.white60),
+                    icon: const Icon(
+                      Icons.lock_open,
+                      color: Color(0xFF94A3B8),
+                      size: 18,
+                    ),
                     label: const Text(
                       'Acil Durum: Kısıtlama Modundan Çık',
-                      style: TextStyle(color: Colors.white60),
+                      style: TextStyle(color: Color(0xFF94A3B8)),
                     ),
                   ),
                 ],

@@ -11,7 +11,11 @@ class ChecklistItem {
     required this.done,
   });
 
-  ChecklistItem copyWith({String? id, String? title, bool? done}) {
+  ChecklistItem copyWith({
+    String? id,
+    String? title,
+    bool? done,
+  }) {
     return ChecklistItem(
       id: id ?? this.id,
       title: title ?? this.title,
@@ -28,7 +32,11 @@ class ChecklistItem {
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'title': title, 'done': done};
+    return {
+      'id': id,
+      'title': title,
+      'done': done,
+    };
   }
 }
 
@@ -95,9 +103,9 @@ class ScheduleBlock {
   String get ownerLabel {
     switch (ownerRole) {
       case 'husband':
-        return 'İlker';
+        return 'Kişisel (İlker)';
       case 'wife':
-        return 'Eşim';
+        return 'Kişisel (Eşim)';
       default:
         return 'Ortak Plan';
     }
@@ -106,7 +114,7 @@ class ScheduleBlock {
   String get statusLabel {
     switch (status) {
       case 'checked_in':
-        return 'Başladı / Derste';
+        return 'Başladı / Aktif';
       case 'completed':
         return 'Tamamlandı';
       case 'skipped':
@@ -206,10 +214,9 @@ class ScheduleBlock {
       title: (json['title'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
       category: (json['category'] ?? 'general').toString(),
-      planDate:
-          (json['plan_date'] ??
-                  DateTime.now().toIso8601String().substring(0, 10))
-              .toString(),
+      planDate: (json['plan_date'] ??
+              DateTime.now().toIso8601String().substring(0, 10))
+          .toString(),
       isRecurringDaily: json['is_recurring_daily'] == true,
       recurrenceDays: parsedDays,
       startTime: (json['start_time'] ?? '08:00').toString(),
@@ -267,6 +274,298 @@ class ScheduleBlock {
       'completion_notes': completionNotes,
       'checklist_items': checklistItems.map((e) => e.toJson()).toList(),
       'updated_at': DateTime.now().toIso8601String(),
+    };
+  }
+}
+
+class MedicationReminder {
+  final int? id;
+  final int familyId;
+  final String ownerRole; // 'husband' | 'wife' | 'shared'
+  final String medicationName;
+  final String dosage;
+  final String scheduleTime;
+  final String mealRelation; // 'before_meal' | 'after_meal' | 'with_water' or Turkish label
+  final bool takenToday;
+  final DateTime? lastTakenAt;
+  final bool notifyDevice;
+
+  const MedicationReminder({
+    this.id,
+    required this.familyId,
+    required this.ownerRole,
+    required this.medicationName,
+    required this.dosage,
+    String? scheduleTime,
+    String? reminderTime,
+    required this.mealRelation,
+    required this.takenToday,
+    this.lastTakenAt,
+    this.notifyDevice = true,
+  }) : scheduleTime = scheduleTime ?? reminderTime ?? '08:30';
+
+  String get reminderTime => scheduleTime;
+
+  String get mealRelationLabel {
+    switch (mealRelation) {
+      case 'before_meal':
+      case 'Aç Karnına':
+        return 'Aç Karnına';
+      case 'with_water':
+      case 'Bol Su İle':
+        return 'Bol Su İle';
+      default:
+        return 'Tok Karnına';
+    }
+  }
+
+  String get ownerLabel {
+    switch (ownerRole) {
+      case 'husband':
+        return 'İlker';
+      case 'wife':
+        return 'Eşim';
+      default:
+        return 'Ortak';
+    }
+  }
+
+  MedicationReminder copyWith({
+    int? id,
+    int? familyId,
+    String? ownerRole,
+    String? medicationName,
+    String? dosage,
+    String? scheduleTime,
+    String? mealRelation,
+    bool? takenToday,
+    DateTime? lastTakenAt,
+    bool? notifyDevice,
+  }) {
+    return MedicationReminder(
+      id: id ?? this.id,
+      familyId: familyId ?? this.familyId,
+      ownerRole: ownerRole ?? this.ownerRole,
+      medicationName: medicationName ?? this.medicationName,
+      dosage: dosage ?? this.dosage,
+      scheduleTime: scheduleTime ?? this.scheduleTime,
+      mealRelation: mealRelation ?? this.mealRelation,
+      takenToday: takenToday ?? this.takenToday,
+      lastTakenAt: lastTakenAt ?? this.lastTakenAt,
+      notifyDevice: notifyDevice ?? this.notifyDevice,
+    );
+  }
+
+  factory MedicationReminder.fromJson(Map<String, dynamic> json) {
+    final rawMeal = (json['meal_relation'] ?? 'after_meal').toString();
+    final mealLabel = switch (rawMeal) {
+      'before_meal' => 'Aç Karnına',
+      'with_water' => 'Bol Su İle',
+      'after_meal' => 'Tok Karnına',
+      _ => rawMeal,
+    };
+    return MedicationReminder(
+      id: (json['id'] as num?)?.toInt(),
+      familyId: (json['family_id'] as num?)?.toInt() ?? 1,
+      ownerRole: (json['owner_role'] ?? 'husband').toString(),
+      medicationName: (json['medication_name'] ?? '').toString(),
+      dosage: (json['dosage'] ?? '1 Tablet').toString(),
+      scheduleTime:
+          (json['schedule_time'] ?? json['reminder_time'] ?? '08:30')
+              .toString(),
+      mealRelation: mealLabel,
+      takenToday: json['taken_today'] == true,
+      lastTakenAt: json['last_taken_at'] != null
+          ? DateTime.tryParse(json['last_taken_at'].toString())
+          : null,
+      notifyDevice: json['notify_device'] != false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final dbMeal = switch (mealRelation) {
+      'Aç Karnına' || 'before_meal' => 'before_meal',
+      'Bol Su İle' || 'with_water' => 'with_water',
+      _ => 'after_meal',
+    };
+    return {
+      'family_id': familyId,
+      'owner_role': ownerRole,
+      'medication_name': medicationName,
+      'dosage': dosage,
+      'schedule_time': scheduleTime,
+      'meal_relation': dbMeal,
+      'taken_today': takenToday,
+      'last_taken_at': lastTakenAt?.toIso8601String(),
+      'notify_device': notifyDevice,
+    };
+  }
+}
+
+class WaterTracker {
+  final int? id;
+  final int familyId;
+  final String ownerRole; // 'husband' | 'wife'
+  final String trackDate;
+  final int dailyGoalMl;
+  final int currentMl;
+  final int cupSizeMl;
+  final int reminderIntervalMinutes;
+  final bool notifyDevice;
+
+  const WaterTracker({
+    this.id,
+    required this.familyId,
+    required this.ownerRole,
+    String? trackDate,
+    required this.dailyGoalMl,
+    int? currentMl,
+    int? currentIntakeMl,
+    required this.cupSizeMl,
+    required this.reminderIntervalMinutes,
+    bool? notifyDevice,
+    bool? reminderEnabled,
+  }) : trackDate = trackDate ?? '2026-10-30',
+       currentMl = currentMl ?? currentIntakeMl ?? 0,
+       notifyDevice = notifyDevice ?? reminderEnabled ?? true;
+
+  int get currentIntakeMl => currentMl;
+  bool get reminderEnabled => notifyDevice;
+
+  double get progress =>
+      dailyGoalMl > 0 ? (currentMl / dailyGoalMl).clamp(0.0, 1.0) : 0.0;
+  double get progressRatio => progress;
+
+  int get cupsDrunk => cupSizeMl > 0 ? (currentMl / cupSizeMl).floor() : 0;
+  int get completedCups => cupsDrunk;
+
+  int get totalCups => cupSizeMl > 0 ? (dailyGoalMl / cupSizeMl).ceil() : 10;
+  int get totalGoalCups => totalCups;
+
+  WaterTracker copyWith({
+    int? id,
+    int? familyId,
+    String? ownerRole,
+    String? trackDate,
+    int? dailyGoalMl,
+    int? currentMl,
+    int? currentIntakeMl,
+    int? cupSizeMl,
+    int? reminderIntervalMinutes,
+    bool? notifyDevice,
+  }) {
+    return WaterTracker(
+      id: id ?? this.id,
+      familyId: familyId ?? this.familyId,
+      ownerRole: ownerRole ?? this.ownerRole,
+      trackDate: trackDate ?? this.trackDate,
+      dailyGoalMl: dailyGoalMl ?? this.dailyGoalMl,
+      currentMl: currentMl ?? currentIntakeMl ?? this.currentMl,
+      cupSizeMl: cupSizeMl ?? this.cupSizeMl,
+      reminderIntervalMinutes:
+          reminderIntervalMinutes ?? this.reminderIntervalMinutes,
+      notifyDevice: notifyDevice ?? this.notifyDevice,
+    );
+  }
+
+  factory WaterTracker.fromJson(Map<String, dynamic> json) {
+    return WaterTracker(
+      id: (json['id'] as num?)?.toInt(),
+      familyId: (json['family_id'] as num?)?.toInt() ?? 1,
+      ownerRole: (json['owner_role'] ?? 'husband').toString(),
+      trackDate: (json['track_date'] ??
+              DateTime.now().toIso8601String().substring(0, 10))
+          .toString(),
+      dailyGoalMl: (json['daily_goal_ml'] as num?)?.toInt() ?? 2500,
+      currentMl:
+          (json['current_ml'] ?? json['current_intake_ml'] as num?)?.toInt() ??
+              0,
+      cupSizeMl: (json['cup_size_ml'] as num?)?.toInt() ?? 250,
+      reminderIntervalMinutes:
+          (json['reminder_interval_minutes'] as num?)?.toInt() ?? 90,
+      notifyDevice: json['notify_device'] != false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'family_id': familyId,
+      'owner_role': ownerRole,
+      'track_date': trackDate,
+      'daily_goal_ml': dailyGoalMl,
+      'current_ml': currentMl,
+      'cup_size_ml': cupSizeMl,
+      'reminder_interval_minutes': reminderIntervalMinutes,
+      'notify_device': notifyDevice,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+  }
+}
+
+class PartnerInvitation {
+  final int? id;
+  final int familyId;
+  final String inviterName;
+  final String inviteeLabel;
+  final String relationType; // 'spouse' | 'friend' | 'family'
+  final String inviteCode;
+  final String status; // 'pending' | 'accepted'
+
+  const PartnerInvitation({
+    this.id,
+    required this.familyId,
+    String? inviterName,
+    String? inviterRole,
+    required this.inviteeLabel,
+    String? inviteeEmail,
+    String? relationType,
+    String? relationshipType,
+    required this.inviteCode,
+    required this.status,
+    bool? allowSharedPlans,
+  }) : inviterName = inviterName ?? (inviterRole == 'wife' ? 'Eşim' : 'İlker'),
+       relationType = relationType ?? relationshipType ?? 'spouse';
+
+  String get relationshipType => relationLabel;
+
+  String get relationLabel {
+    switch (relationType) {
+      case 'friend':
+      case 'Arkadaş / Çalışma Partneri':
+        return 'Arkadaş / Partner';
+      case 'family':
+      case 'Aile Üyesi':
+        return 'Aile Üyesi';
+      default:
+        return 'Eş (Ortak Ajanda)';
+    }
+  }
+
+  factory PartnerInvitation.fromJson(Map<String, dynamic> json) {
+    return PartnerInvitation(
+      id: (json['id'] as num?)?.toInt(),
+      familyId: (json['family_id'] as num?)?.toInt() ?? 1,
+      inviterName: (json['inviter_name'] ?? 'İlker').toString(),
+      inviteeLabel: (json['invitee_label'] ?? 'Eşim').toString(),
+      relationType: (json['relation_type'] ?? 'spouse').toString(),
+      inviteCode: (json['invite_code'] ?? 'AYDOGDU26').toString(),
+      status: (json['status'] ?? 'accepted').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final dbRelation = switch (relationType) {
+      'Arkadaş / Çalışma Partneri' || 'friend' => 'friend',
+      'Aile Üyesi' || 'family' => 'family',
+      _ => 'spouse',
+    };
+    return {
+      'family_id': familyId,
+      'inviter_name': inviterName,
+      'invitee_label': inviteeLabel,
+      'relation_type': dbRelation,
+      'invite_code': inviteCode,
+      'status': status,
     };
   }
 }

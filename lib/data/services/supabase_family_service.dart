@@ -34,6 +34,61 @@ class SupabaseFamilyService {
     );
   }
 
+  /// Registers a new user account in Supabase Auth and links them to a family
+  /// (either an existing family via invite code or the primary family).
+  Future<String> signUpNewMember({
+    required String displayName,
+    required String email,
+    required String password,
+    required String roleLabel,
+    String? inviteCode,
+  }) async {
+    final cleanEmail = email.trim().toLowerCase();
+    AuthResponse authRes;
+    try {
+      authRes = await _client.auth.signUp(
+        email: cleanEmail,
+        password: password,
+        data: {'display_name': displayName.trim(), 'role': roleLabel},
+      );
+    } on AuthException catch (e) {
+      if (e.message.toLowerCase().contains('already registered')) {
+        authRes = await _client.auth.signInWithPassword(
+          email: cleanEmail,
+          password: password,
+        );
+      } else {
+        rethrow;
+      }
+    }
+
+    final userId = authRes.user?.id ?? currentUser?.id;
+    int targetFamilyId = 1;
+
+    if (inviteCode != null && inviteCode.trim().isNotEmpty) {
+      final familyMatch = await _client
+          .from('families')
+          .select('id')
+          .eq('invite_code', inviteCode.trim().toUpperCase())
+          .maybeSingle();
+      if (familyMatch != null && familyMatch['id'] is int) {
+        targetFamilyId = familyMatch['id'] as int;
+      }
+    }
+
+    if (userId != null) {
+      await _client.from('family_members').upsert({
+        'family_id': targetFamilyId,
+        'user_id': userId,
+        'role': roleLabel,
+        'display_name': displayName.trim(),
+        'avatar_color': roleLabel == 'wife' ? '#EC4899' : '#2563EB',
+      }, onConflict: 'family_id,user_id');
+    }
+
+    return cleanEmail;
+  }
+
   Future<FamilyProfile> fetchPrimaryFamily() async {
     final response = await _client
         .from('families')
@@ -161,6 +216,131 @@ class SupabaseFamilyService {
     return FocusSession.fromJson(updated);
   }
 
+  // ===========================================================================
+  // MEDICATION REMINDERS
+  // ===========================================================================
+
+  Future<List<MedicationReminder>> fetchMedicationReminders(int familyId) async {
+    final rows = await _client
+        .from('medication_reminders')
+        .select()
+        .eq('family_id', familyId)
+        .order('schedule_time', ascending: true);
+
+    return (rows as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .map(MedicationReminder.fromJson)
+        .toList();
+  }
+
+  Future<MedicationReminder> createMedicationReminder(
+    MedicationReminder reminder,
+  ) async {
+    final inserted = await _client
+        .from('medication_reminders')
+        .insert(reminder.toJson())
+        .select()
+        .single();
+
+    return MedicationReminder.fromJson(inserted);
+  }
+
+  Future<MedicationReminder> toggleMedicationTaken(
+    MedicationReminder reminder,
+    String todayIso,
+  ) async {
+    if (reminder.id == null) return reminder;
+    final newTakenState = !reminder.takenToday;
+    final updated = await _client
+        .from('medication_reminders')
+        .update({
+          'taken_today': newTakenState,
+          'last_taken_at': newTakenState ? DateTime.now().toIso8601String() : null,
+        })
+        .eq('id', reminder.id!)
+        .select()
+        .single();
+
+    return MedicationReminder.fromJson(updated);
+  }
+
+  Future<void> deleteMedicationReminder(int id) async {
+    await _client.from('medication_reminders').delete().eq('id', id);
+  }
+
+  // ===========================================================================
+  // WATER TRACKERS
+  // ===========================================================================
+
+  Future<List<WaterTracker>> fetchWaterTrackers(int familyId) async {
+    final rows = await _client
+        .from('water_trackers')
+        .select()
+        .eq('family_id', familyId)
+        .order('id', ascending: true);
+
+    return (rows as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .map(WaterTracker.fromJson)
+        .toList();
+  }
+
+  Future<WaterTracker> updateWaterIntake({
+    required WaterTracker tracker,
+    required int newIntakeMl,
+  }) async {
+    final clamped = newIntakeMl.clamp(0, 10000);
+    if (tracker.id == null) {
+      final inserted = await _client
+          .from('water_trackers')
+          .insert(tracker.copyWith(currentMl: clamped).toJson())
+          .select()
+          .single();
+      return WaterTracker.fromJson(inserted);
+    }
+
+    final updated = await _client
+        .from('water_trackers')
+        .update({
+          'current_ml': clamped,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', tracker.id!)
+        .select()
+        .single();
+
+    return WaterTracker.fromJson(updated);
+  }
+
+  // ===========================================================================
+  // PARTNER & FRIEND INVITATIONS
+  // ===========================================================================
+
+  Future<List<PartnerInvitation>> fetchPartnerInvitations(int familyId) async {
+    final rows = await _client
+        .from('partner_invitations')
+        .select()
+        .eq('family_id', familyId)
+        .order('id', ascending: false);
+
+    return (rows as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .map(PartnerInvitation.fromJson)
+        .toList();
+  }
+
+  Future<PartnerInvitation> createPartnerInvitation(
+    PartnerInvitation invitation,
+  ) async {
+    final inserted = await _client
+        .from('partner_invitations')
+        .insert(invitation.toJson())
+        .select()
+        .single();
+
+    return PartnerInvitation.fromJson(inserted);
+  }
+
   RealtimeChannel subscribeToFamilyChanges({
     required int familyId,
     required VoidCallback onDataChanged,
@@ -177,6 +357,24 @@ class SupabaseFamilyService {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'focus_sessions',
+          callback: (_) => onDataChanged(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'medication_reminders',
+          callback: (_) => onDataChanged(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'water_trackers',
+          callback: (_) => onDataChanged(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'partner_invitations',
           callback: (_) => onDataChanged(),
         )
         .subscribe();

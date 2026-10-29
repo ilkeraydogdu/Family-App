@@ -1,35 +1,32 @@
-# Family-App (Aile Düzeni & Ortak Saatlik Ajanda)
+# Family-App (Aile Düzeni, Ortak Ajanda, İlaç & Su Hatırlatıcı)
 
-Eşlerin hem kendi kişisel saatlik planlarını hem de ortak aile rutinlerini (05:00 uyanış, canlı namaz vakitleri, servis/iş saatleri, gitar dersi vb.) gerçek zamanlı senkronize olarak yönetebildiği **Flutter (Android & iOS) + Supabase** uygulaması.
+Eşlerin ve partnerlerin kendi telefonlarında kişisel hesaplarıyla oturum açarak hem **ortak planlarını** hem de **birbirinden bağımsız kişisel planlarını** gerçek zamanlı yönetebildiği, **yalnızca Android (`android/`) ve iOS (`ios/`)** platformları için optimize edilmiş **Flutter + Supabase** yaşam düzeni uygulaması.
 
 ## Öne Çıkan Özellikler
 
-1. **Ortak ve Kişisel Saatlik Ajanda (`schedule_blocks`)**
-   - **İlker (Ben)**, **Eşim** ve **Ortak Plan** ayrımı ile aynı saatte kimin hangi planda olduğunu yan yana veya birleşik akışta görme.
-   - Örnek Akış:
-     - `05:00 - 05:45`: Güne Uyanış & Hazırlık (Ortak)
-     - `06:00 - 06:30`: Sabah Namazı (Canlı Diyanet vaktine bağlı)
-     - `06:45 - 07:45`: Servise Yürüyüş & Servis (İlker - Sabah namazından 45 dk sonraya otomatik ayarlı)
-     - `08:00 - 12:00`: İş Başlangıcı & Odak Bloğu (İlker)
-     - `08:00 - 09:00`: Sabah Rutini & Planlama (Eşim)
-     - `09:00 - 11:00`: Gitar Dersi & Pratik (Eşim - 15 dk kala 3 tekrarlı sesli hatırlatıcı, alt görev tik listesi ve ders sonu özet notu)
+1. **Kişisel Üyelik (`Üye Ol / Giriş Yap`) ve Eş / Arkadaş Davet Sistemi (`partner_invitations`)**
+   - Her kullanıcı kendi telefonunda bireysel hesabını oluşturabilir veya giriş yapabilir.
+   - Aile davet kodu (`AYDOGDU26`) veya özel davet bağlantısıyla eşini, arkadaşını ya da aile üyesini davet ederek **Ortak Planlar** ve **Bağımsız Kişisel Planlar** oluşturabilir.
 
-2. **Canlı Namaz Vakitleri Entegrasyonu (Diyanet Metodu)**
-   - Seçilen şehre göre (`Istanbul`, `Ankara`, `Izmir`, `Eskisehir` vb.) canlı namaz vakitlerini çeker.
-   - **"Canlı Namaz Vaktine Bağla"** seçeneği açık olan planları (Sabah namazı, namaz sonrası servis yürüyüşü vb.) değişen namaz saatlerine göre otomatik hizalar.
+2. **İlaç & Vitamin Hatırlatıcı (`medication_reminders`) ve Su Takip Sistemi (`water_trackers`)**
+   - **İlaç Hatırlatıcı:** Günlük ilaç ve takviyeleri (`Omega-3 & D3`, `Magnezyum`, `Demir & Folik Asit` vb.) saat, dozaj ve kullanım şekline (`Aç Karnına`, `Tok Karnına`, `Bol Su İle`) göre takip eder, cihaz bildirimi gönderir.
+   - **Su Hatırlatıcı:** Günlük su hedefi (`2500 ml`), `+250 ml (1 Bardak)` / `+500 ml (Şişe)` hızlı ekleme butonları, ilerleme çubuğu ve periyodik su içme cihaz bildirimi sunar.
 
-3. **Sesli Hatırlatıcı (Türkçe TTS) & Tekrarlı Alarm**
-   - Her etkinlik için **kaç dakika kala** haber vereceği (`5, 10, 15, 30, 45 dk`), **kaç kez tekrarlayacağı** (`1-10 kez`) ve **kaç dakika arayla** sesli okuyacağı ayarlanır.
-   - Kullanıcı **"Derse Geldim / Başladım"** butonuna bastığında tekrarlayan sesli bildirimler otomatik susturulur.
+3. **Gerçek Cihaz Bildirimleri (`flutter_local_notifications`) ve İzin Yönetimi**
+   - Uygulama içi uyarıların yanı sıra doğrudan **iOS ve Android işletim sistemi bildirim merkezine** (`UNUserNotificationCenter` / Android Notification Channel) bildirim gönderir ve gerekli bildirim/alarm izinlerini ister.
 
-4. **Ders / İş Sonu Özeti, Tik Listesi ve "Atlandı" Takibi**
-   - Etkinlik biterken (bir sonraki işe geçmeden önce) alt görevlere tik atılabilir (`checklist_items`) ve *"Bu derste/saatte neler yaptım?"* özeti kaydedilebilir (`completion_notes`).
-   - Derse veya plana gidilemediğinde **"Bugün Gitmedim / Atladım"** seçilerek mazeret kaydedilir ve **Takip & Özet** sekmesinde atlanan dersler takip edilir.
+4. **Canlı Diyanet Namaz Vakitleri & Saatlik Ajanda (`schedule_blocks`)**
+   - `05:00` uyanış, canlı Diyanet namaz vakitleri (`Sabah`, `Öğle`, `İkindi`, `Akşam`, `Yatsı`), namaz sonrası servis yürüyüşü (`06:45`), iş başlangıcı (`08:00`) ve gitar dersi (`09:00 - 11:00`) gibi saatlik blokları yönetir.
+   - **"Derse Geldim / Başladım"** seçildiğinde tekrarlayan sesli (Türkçe TTS) ve cihaz bildirimlerini susturur.
+   - Ders sonunda bir sonraki işe geçmeden önce **alt görev tik listesi (`checklist_items`)**, **neler yapıldığı özeti (`completion_notes`)** ve gidilemeyen dersler için **Atlanan Ders Takibi (`skipped`) + Telafi Et** akışı sunar.
 
-5. **Telefon Kısıtlama & Odak Kalkanı (Sadece Aramalar Açık)**
-   - Belirlenen saat aralıklarında (`focus_sessions` veya `phone_lock_enabled` açık olan ders/uyku/aile saatlerinde) tam ekran **Kısıtlama Kalkanı** devreye girer; yalnızca gelen aramalara cevap verilmesine izin verir.
+5. **Minimal, Göz Yormayan Modern Tasarım & Özel Vektörel SVG İkonlar (`flutter_svg`)**
+   - Emoji kullanılmadan tamamen özel tasarım vektörel SVG ikonlar (`AppSvgIcon`) ve göz yormayan minimal renk paletiyle tasarlanmıştır.
 
-## Çalıştırma
+6. **Telefon Kısıtlama & Odak Kalkanı (`focus_sessions`)**
+   - Belirlenen saat aralıklarında telefonu kullanım dışı bırakarak yalnızca gelen telefon aramalarına cevap verilmesine izin verir.
+
+## Çalıştırma (Android & iOS)
 
 ```bash
 flutter pub get

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/family_models.dart';
+import '../core/app_svg_icons.dart';
 import '../view_models/planner_view_model.dart';
+import '../widgets/auth_and_invite_sheet.dart';
 import '../widgets/block_editor_sheet.dart';
 import '../widgets/completion_review_sheet.dart';
 import 'phone_lockdown_shield_view.dart';
@@ -18,113 +20,13 @@ class HomeShellView extends StatefulWidget {
 class _HomeShellViewState extends State<HomeShellView> {
   int _selectedTabIndex = 0;
 
-  PlannerViewModel get vm => widget.viewModel;
-
-  void _openBlockEditor({ScheduleBlock? existing}) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => BlockEditorSheet(
-        familyId: vm.familyProfile.id,
-        planDate: vm.formattedSelectedDate,
-        existingBlock: existing,
-        onSave: vm.saveOrCreateBlock,
-      ),
-    );
-  }
-
-  void _openCompletionSheet(ScheduleBlock block) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => CompletionReviewSheet(
-        block: block,
-        onComplete: (notes, checklist) {
-          vm.completeBlockWithSummary(
-            block: block,
-            completionNotes: notes,
-            updatedChecklist: checklist,
-          );
-        },
-        onSkip: (reason) {
-          vm.skipBlockWithReason(block: block, skipReason: reason);
-        },
-      ),
-    );
-  }
-
-  void _openFamilySettingsDialog() {
-    final cityCtrl = TextEditingController(text: vm.familyProfile.city);
-    final wakeCtrl = TextEditingController(text: vm.familyProfile.wakeUpTime);
-    final sleepCtrl = TextEditingController(text: vm.familyProfile.sleepTime);
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Aile & Namaz Vakti Ayarları'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: cityCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Şehir (Canlı Diyanet Namaz Vakti İçin)',
-                hintText: 'Istanbul, Ankara, Izmir, Eskisehir...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: wakeCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Ortak Uyanış Hedefi (Örn: 05:00)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: sleepCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Ortak Uyku Hedefi (Örn: 23:00)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('İptal'),
-          ),
-          FilledButton(
-            onPressed: () {
-              vm.updateFamilySettings(
-                city: cityCtrl.text.trim().isEmpty
-                    ? 'Istanbul'
-                    : cityCtrl.text.trim(),
-                wakeUpTime: wakeCtrl.text.trim().isEmpty
-                    ? '05:00'
-                    : wakeCtrl.text.trim(),
-                sleepTime: sleepCtrl.text.trim().isEmpty
-                    ? '23:00'
-                    : sleepCtrl.text.trim(),
-              );
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Kaydet & Güncelle'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: vm,
+      listenable: widget.viewModel,
       builder: (context, _) {
+        final vm = widget.viewModel;
+
         if (vm.isPhoneLockShieldActive) {
           return PhoneLockdownShieldView(
             reasonTitle: vm.activeLockdownReason,
@@ -133,84 +35,103 @@ class _HomeShellViewState extends State<HomeShellView> {
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: const Color(0xFFF6F7F9),
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1E1B4B),
-            foregroundColor: Colors.white,
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
             elevation: 0,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            titleSpacing: 16,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(height: 1, color: const Color(0xFFE2E8F0)),
+            ),
+            title: Row(
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: const AppSvgIcon(
+                    svgData: AppSvgs.calendar,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         vm.familyProfile.name,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                      Text(
+                        '${vm.activeDisplayName} • Uyanış ${vm.familyProfile.wakeUpTime} • Uyku ${vm.familyProfile.sleepTime}',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        vm.familyProfile.inviteCode,
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Uyanış: ${vm.familyProfile.wakeUpTime} • Uyku: ${vm.familyProfile.sleepTime} • ${vm.familyProfile.city}',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    ],
+                  ),
                 ),
               ],
             ),
             actions: [
+              // 1-Tap Role Switcher (İlker <-> Eşim)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
-                child: ActionChip(
-                  backgroundColor: vm.activeUserRole == 'husband'
-                      ? const Color(0xFF4F46E5)
-                      : const Color(0xFFEC4899),
-                  avatar: const Icon(
-                    Icons.swap_horiz,
-                    color: Colors.white,
-                    size: 16,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  label: Text(
-                    vm.activeUserRole == 'husband'
-                        ? 'Aktif: İlker'
-                        : 'Aktif: Eşim',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildRolePill(
+                        vm: vm,
+                        role: 'husband',
+                        label: 'İlker',
+                      ),
+                      _buildRolePill(
+                        vm: vm,
+                        role: 'wife',
+                        label: 'Eşim',
+                      ),
+                    ],
                   ),
-                  onPressed: () {
-                    final nextRole = vm.activeUserRole == 'husband'
-                        ? 'wife'
-                        : 'husband';
-                    vm.switchActivePersonRole(nextRole);
-                  },
                 ),
               ),
               IconButton(
-                tooltip: 'Şehir & Uyku Saatleri',
-                onPressed: _openFamilySettingsDialog,
-                icon: const Icon(Icons.tune),
+                tooltip: 'Üyelik & Eş Davet',
+                onPressed: () => _openAuthAndInviteModal(context, vm),
+                icon: const AppSvgIcon(
+                  svgData: AppSvgs.usersCouple,
+                  size: 20,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Rutin & Şehir Ayarları',
+                onPressed: () => _openFamilySettingsDialog(context, vm),
+                icon: const AppSvgIcon(
+                  svgData: AppSvgs.sliders,
+                  size: 19,
+                  color: Color(0xFF475569),
+                ),
               ),
             ],
           ),
@@ -221,16 +142,17 @@ class _HomeShellViewState extends State<HomeShellView> {
                     if (vm.lastSpokenReminder != null)
                       Container(
                         width: double.infinity,
-                        color: Colors.amber.shade900,
+                        color: const Color(0xFF0F172A),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.record_voice_over,
-                              color: Colors.white,
+                            const AppSvgIcon(
+                              svgData: AppSvgs.bellNotification,
+                              color: Color(0xFF38BDF8),
+                              size: 18,
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -244,282 +166,485 @@ class _HomeShellViewState extends State<HomeShellView> {
                               ),
                             ),
                             TextButton(
-                              style: TextButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.amber.shade900,
-                              ),
                               onPressed: vm.stopAllVoiceReminders,
-                              child: const Text('Sustur'),
+                              child: const Text(
+                                'Sustur',
+                                style: TextStyle(
+                                  color: Color(0xFF38BDF8),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     Expanded(
                       child: switch (_selectedTabIndex) {
-                        0 => _buildDailyTimelineTab(),
-                        1 => _buildCoupleComparisonTab(),
-                        2 => _buildFocusLockdownTab(),
-                        _ => _buildStatsAndTrackingTab(),
+                        0 => _buildDailyAgendaTab(context, vm),
+                        1 => _buildCoupleComparisonTab(context, vm),
+                        2 => _buildHealthWaterAndMedicationsTab(context, vm),
+                        3 => _buildFocusLockdownTab(context, vm),
+                        _ => _buildAnalyticsAndSkippedTab(context, vm),
                       },
                     ),
                   ],
                 ),
           floatingActionButton: _selectedTabIndex <= 1
               ? FloatingActionButton.extended(
-                  onPressed: () => _openBlockEditor(),
-                  backgroundColor: const Color(0xFF4F46E5),
+                  backgroundColor: const Color(0xFF0F172A),
                   foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add_alarm),
-                  label: const Text('Saatlik Plan Ekle'),
+                  elevation: 2,
+                  onPressed: () => _openBlockEditor(context, vm, null),
+                  icon: const AppSvgIcon(
+                    svgData: AppSvgs.plus,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  label: const Text(
+                    'Yeni Plan Ekle',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 )
               : null,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _selectedTabIndex,
-            onDestinationSelected: (idx) =>
-                setState(() => _selectedTabIndex = idx),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.schedule_outlined),
-                selectedIcon: Icon(Icons.schedule),
-                label: 'Günlük Ajanda',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people),
-                label: 'Ben & Eşim',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.phonelink_lock_outlined),
-                selectedIcon: Icon(Icons.phonelink_lock),
-                label: 'Odak & Kilit',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.analytics_outlined),
-                selectedIcon: Icon(Icons.analytics),
-                label: 'Takip & Özet',
-              ),
-            ],
+          bottomNavigationBar: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: NavigationBar(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              indicatorColor: const Color(0xFFF1F5F9),
+              height: 66,
+              selectedIndex: _selectedTabIndex,
+              onDestinationSelected: (idx) =>
+                  setState(() => _selectedTabIndex = idx),
+              destinations: const [
+                NavigationDestination(
+                  icon: AppSvgIcon(
+                    svgData: AppSvgs.calendar,
+                    color: Color(0xFF64748B),
+                    size: 20,
+                  ),
+                  selectedIcon: AppSvgIcon(
+                    svgData: AppSvgs.calendar,
+                    color: Color(0xFF0F172A),
+                    size: 20,
+                  ),
+                  label: 'Ajanda',
+                ),
+                NavigationDestination(
+                  icon: AppSvgIcon(
+                    svgData: AppSvgs.usersCouple,
+                    color: Color(0xFF64748B),
+                    size: 20,
+                  ),
+                  selectedIcon: AppSvgIcon(
+                    svgData: AppSvgs.usersCouple,
+                    color: Color(0xFF0F172A),
+                    size: 20,
+                  ),
+                  label: 'Ortak & Eş',
+                ),
+                NavigationDestination(
+                  icon: AppSvgIcon(
+                    svgData: AppSvgs.waterDrop,
+                    color: Color(0xFF64748B),
+                    size: 20,
+                  ),
+                  selectedIcon: AppSvgIcon(
+                    svgData: AppSvgs.waterDrop,
+                    color: Color(0xFF0F766E),
+                    size: 20,
+                  ),
+                  label: 'İlaç & Su',
+                ),
+                NavigationDestination(
+                  icon: AppSvgIcon(
+                    svgData: AppSvgs.shieldLock,
+                    color: Color(0xFF64748B),
+                    size: 20,
+                  ),
+                  selectedIcon: AppSvgIcon(
+                    svgData: AppSvgs.shieldLock,
+                    color: Color(0xFF0F172A),
+                    size: 20,
+                  ),
+                  label: 'Odak Kilit',
+                ),
+                NavigationDestination(
+                  icon: AppSvgIcon(
+                    svgData: AppSvgs.noteSummary,
+                    color: Color(0xFF64748B),
+                    size: 20,
+                  ),
+                  selectedIcon: AppSvgIcon(
+                    svgData: AppSvgs.noteSummary,
+                    color: Color(0xFF0F172A),
+                    size: 20,
+                  ),
+                  label: 'Takip',
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildDailyTimelineTab() {
-    final p = vm.prayerTimes;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-      children: [
-        // Live Prayer Times Card
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-            ),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.mosque,
-                          color: Colors.amberAccent,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Canlı Namaz Vakitleri (${p.city})',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: vm.syncAllWithLivePrayerTimes,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: Colors.amberAccent),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.sync, color: Colors.amberAccent, size: 13),
-                          SizedBox(width: 4),
-                          Text(
-                            'Vakte Hizala',
-                            style: TextStyle(
-                              color: Colors.amberAccent,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _prayerPill('Sabah', p.fajr),
-                  _prayerPill('Güneş', p.sunrise),
-                  _prayerPill('Öğle', p.dhuhr),
-                  _prayerPill('İkindi', p.asr),
-                  _prayerPill('Akşam', p.maghrib),
-                  _prayerPill('Yatsı', p.isha),
-                ],
-              ),
-            ],
+  Widget _buildRolePill({
+    required PlannerViewModel vm,
+    required String role,
+    required String label,
+  }) {
+    final active = vm.activeUserRole == role;
+    return GestureDetector(
+      onTap: () => vm.switchActivePersonRole(role),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF0F172A) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: active ? Colors.white : const Color(0xFF475569),
           ),
         ),
-        const SizedBox(height: 12),
-        // Date & Filter Bar
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _filterChip('all', 'Ortak Akış (İkimiz)', Icons.people),
-              const SizedBox(width: 8),
-              _filterChip('husband', 'İlker\'in Planı', Icons.person),
-              const SizedBox(width: 8),
-              _filterChip('wife', 'Eşimin Planı', Icons.person_2),
-              const SizedBox(width: 8),
-              _filterChip('shared', 'Sadece Ortak', Icons.favorite),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...vm.filteredBlocks.map(_buildScheduleBlockCard),
-      ],
+      ),
     );
   }
 
-  Widget _prayerPill(String label, String time) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 11),
-        ),
-        const SizedBox(height: 3),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
+  // ===========================================================================
+  // TAB 1: GÜNLÜK SAATLİK AJANDA & CANLI NAMAZ VAKİTLERİ
+  // ===========================================================================
+  Widget _buildDailyAgendaTab(BuildContext context, PlannerViewModel vm) {
+    final blocks = vm.filteredBlocks;
+
+    return RefreshIndicator(
+      onRefresh: vm.syncAllWithLivePrayerTimes,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
+        children: [
+          _buildLivePrayerTimesBanner(vm),
+          const SizedBox(height: 12),
+          _buildQuickHealthSummaryStrip(vm),
+          const SizedBox(height: 12),
+          _buildFilterRow(vm),
+          const SizedBox(height: 12),
+          if (blocks.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: _minimalCardDecoration(),
+              child: const Center(
+                child: Text(
+                  'Seçili filtrede henüz saatlik plan bulunmuyor.',
+                  style: TextStyle(color: Color(0xFF64748B)),
+                ),
+              ),
+            )
+          else
+            ...blocks.map((block) => _buildScheduleBlockCard(context, vm, block)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLivePrayerTimesBanner(PlannerViewModel vm) {
+    final p = vm.prayerTimes;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const AppSvgIcon(
+                  svgData: AppSvgs.prayerCrescent,
+                  color: Color(0xFF0F766E),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Canlı Diyanet Namaz Vakitleri (${p.city})',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const Text(
+                      'Namaza bağlı sabah uyanış ve servis saatleri otomatik güncellenir',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: vm.syncAllWithLivePrayerTimes,
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF0F766E),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                ),
+                child: const Text(
+                  'Hizala',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
-          child: Text(
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _prayerChip('Sabah', p.fajr),
+              _prayerChip('Güneş', p.sunrise),
+              _prayerChip('Öğle', p.dhuhr),
+              _prayerChip('İkindi', p.asr),
+              _prayerChip('Akşam', p.maghrib),
+              _prayerChip('Yatsı', p.isha),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _prayerChip(String label, String time) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
             time,
             style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w700,
               fontSize: 12,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _filterChip(String key, String label, IconData icon) {
-    final selected = vm.timelineFilter == key;
-    return ChoiceChip(
-      avatar: Icon(
-        icon,
-        size: 16,
-        color: selected ? Colors.white : const Color(0xFF1E1B4B),
+  Widget _buildQuickHealthSummaryStrip(PlannerViewModel vm) {
+    final water = vm.activeWaterTracker;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTabIndex = 2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            const AppSvgIcon(
+              svgData: AppSvgs.waterDrop,
+              color: Color(0xFF0284C7),
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Su: ${water.currentIntakeMl}/${water.dailyGoalMl} ml',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            Container(
+              width: 1,
+              height: 16,
+              color: const Color(0xFFE2E8F0),
+              margin: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            const AppSvgIcon(
+              svgData: AppSvgs.pillCapsule,
+              color: Color(0xFF0F766E),
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'İlaç: ${vm.takenMedicationCount}/${vm.medicationReminders.length} Tamam',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            const Text(
+              'Aç',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F766E),
+              ),
+            ),
+          ],
+        ),
       ),
-      label: Text(label),
-      selected: selected,
-      selectedColor: const Color(0xFF4F46E5),
-      labelStyle: TextStyle(
-        color: selected ? Colors.white : const Color(0xFF1E1B4B),
-        fontWeight: FontWeight.w600,
-      ),
-      onSelected: (_) => vm.setTimelineFilter(key),
     );
   }
 
-  Widget _buildScheduleBlockCard(ScheduleBlock block) {
-    final isHusband = block.ownerRole == 'husband';
-    final isWife = block.ownerRole == 'wife';
-    final accentColor = isHusband
-        ? const Color(0xFF4F46E5)
-        : isWife
-        ? const Color(0xFFDB2777)
-        : const Color(0xFF0D9488);
+  Widget _buildFilterRow(PlannerViewModel vm) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _filterPill(vm, 'all', 'Tüm Planlar'),
+          const SizedBox(width: 8),
+          _filterPill(vm, 'shared', 'Ortak Planlarımız'),
+          const SizedBox(width: 8),
+          _filterPill(vm, 'husband', 'İlker (Bağımsız + Ortak)'),
+          const SizedBox(width: 8),
+          _filterPill(vm, 'wife', 'Eşim (Bağımsız + Ortak)'),
+        ],
+      ),
+    );
+  }
 
-    Color statusBg = Colors.grey.shade100;
-    Color statusText = Colors.grey.shade800;
-    if (block.status == 'checked_in') {
-      statusBg = Colors.blue.shade50;
-      statusText = Colors.blue.shade800;
-    } else if (block.status == 'completed') {
-      statusBg = Colors.green.shade50;
-      statusText = Colors.green.shade800;
-    } else if (block.status == 'skipped') {
-      statusBg = Colors.red.shade50;
-      statusText = Colors.red.shade800;
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: block.status == 'checked_in'
-              ? Colors.blue.shade400
-              : Colors.grey.shade200,
-          width: block.status == 'checked_in' ? 2 : 1,
+  Widget _filterPill(PlannerViewModel vm, String value, String label) {
+    final selected = vm.timelineFilter == value;
+    return GestureDetector(
+      onTap: () => vm.setTimelineFilter(value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? Colors.white : const Color(0xFF475569),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildScheduleBlockCard(
+    BuildContext context,
+    PlannerViewModel vm,
+    ScheduleBlock block,
+  ) {
+    final ownerColor = switch (block.ownerRole) {
+      'husband' => const Color(0xFF2563EB),
+      'wife' => const Color(0xFFDB2777),
+      _ => const Color(0xFF0F766E),
+    };
+
+    final statusBadge = switch (block.status) {
+      'checked_in' => (
+        'Derste / Başladı',
+        const Color(0xFF0284C7),
+        const Color(0xFFE0F2FE),
+      ),
+      'completed' => (
+        'Tamamlandı',
+        const Color(0xFF15803D),
+        const Color(0xFFDCFCE7),
+      ),
+      'skipped' => (
+        'Atlandı',
+        const Color(0xFFB91C1C),
+        const Color(0xFFFEE2E2),
+      ),
+      _ => ('Planlandı', const Color(0xFF475569), const Color(0xFFF1F5F9)),
+    };
+
+    final isRinging = vm.isReminderActiveFor(block.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: _minimalCardDecoration(),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row: Time + Owner Badge + Status Badge + Edit
+            // Top bar: Time + Owner badge + Status badge
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+                    horizontal: 9,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  child: Text(
-                    '${block.startTime} - ${block.endTime}',
-                    style: TextStyle(
-                      color: accentColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const AppSvgIcon(
+                        svgData: AppSvgs.clock,
+                        size: 13,
+                        color: Color(0xFF0F172A),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${block.startTime} - ${block.endTime}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -529,14 +654,14 @@ class _HomeShellViewState extends State<HomeShellView> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: accentColor,
-                    borderRadius: BorderRadius.circular(8),
+                    color: ownerColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(7),
                   ),
                   child: Text(
                     block.ownerLabel,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                    style: TextStyle(
+                      color: ownerColor,
+                      fontWeight: FontWeight.w700,
                       fontSize: 11,
                     ),
                   ),
@@ -545,139 +670,194 @@ class _HomeShellViewState extends State<HomeShellView> {
                 Flexible(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
+                      horizontal: 8,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: statusBg,
-                      borderRadius: BorderRadius.circular(8),
+                      color: statusBadge.$3,
+                      borderRadius: BorderRadius.circular(7),
                     ),
                     child: Text(
-                      block.statusLabel,
+                      statusBadge.$1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: statusText,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
+                        color: statusBadge.$2,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
                       ),
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        block.title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
+                          decoration: block.status == 'skipped'
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                      if (block.description.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          block.description,
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  onPressed: () => _openBlockEditor(existing: block),
+                  tooltip: 'Planı Düzenle',
+                  onPressed: () => _openBlockEditor(context, vm, block),
+                  icon: const AppSvgIcon(
+                    svgData: AppSvgs.sliders,
+                    size: 16,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ],
             ),
+
+            // Feature tags (Prayer anchor, Voice reminder, Phone lock)
             const SizedBox(height: 8),
-            Text(
-              block.title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                decoration: block.status == 'skipped'
-                    ? TextDecoration.lineThrough
-                    : null,
-              ),
-            ),
-            if (block.description.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                block.description,
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-              ),
-            ],
-            const SizedBox(height: 8),
-            // Feature Badges (Prayer Anchored, Voice Reminder, Phone Lock)
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
                 if (block.isPrayerAnchored)
-                  _infoBadge(
-                    Icons.mosque,
-                    'Canlı ${PrayerTimesDay.turkishPrayerName(block.prayerName)} Vaktine Bağlı',
-                    Colors.teal.shade700,
+                  _featureTag(
+                    svg: AppSvgs.prayerCrescent,
+                    text:
+                        'Canlı Namaz Vakti (${block.prayerOffsetMinutes == 0 ? "Tam Vakit" : "+${block.prayerOffsetMinutes} dk"})',
+                    color: const Color(0xFF0F766E),
                   ),
                 if (block.voiceReminderEnabled)
-                  _infoBadge(
-                    Icons.record_voice_over,
-                    '${block.remindBeforeMinutes} dk kala • ${block.repeatCount} kez sesli tekrar',
-                    Colors.deepPurple.shade700,
+                  _featureTag(
+                    svg: AppSvgs.voiceWave,
+                    text:
+                        '${block.remindBeforeMinutes} dk kala • ${block.repeatCount}x sesli & bildirim',
+                    color: const Color(0xFF4F46E5),
                   ),
                 if (block.phoneLockEnabled)
-                  _infoBadge(
-                    Icons.phonelink_lock,
-                    'Telefon Kısıtlı (Sadece Aramalar)',
-                    Colors.amber.shade900,
+                  _featureTag(
+                    svg: AppSvgs.shieldLock,
+                    text: 'Telefon Kısıtlama (Sadece Arama)',
+                    color: const Color(0xFFB45309),
                   ),
               ],
             ),
-            // Checklist ("tık attığı yer")
+
+            // Sub-task checklist items
             if (block.checklistItems.isNotEmpty) ...[
-              const Divider(height: 18),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Alt Görevler (${block.completedChecklistCount}/${block.checklistItems.length})',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sonraki İşten Önce Yapılacaklar (Tik Listesi)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF475569),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              ...block.checklistItems.map(
-                (item) => InkWell(
-                  onTap: () => vm.toggleChecklistItem(block, item.id),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      children: [
-                        Icon(
-                          item.done
-                              ? Icons.check_box
-                              : Icons.check_box_outline_blank,
-                          size: 18,
-                          color: item.done ? Colors.green : Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              fontSize: 13,
-                              decoration: item.done
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
+                    const SizedBox(height: 4),
+                    ...block.checklistItems.map(
+                      (item) => InkWell(
+                        onTap: () => vm.toggleChecklistItem(block, item.id),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(
+                            children: [
+                              Icon(
+                                item.done
+                                    ? Icons.check_box_rounded
+                                    : Icons.check_box_outline_blank_rounded,
+                                size: 18,
+                                color: item.done
+                                    ? const Color(0xFF0F766E)
+                                    : const Color(0xFF94A3B8),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  item.title,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: const Color(0xFF1E293B),
+                                    decoration: item.done
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],
+
+            // Completion notes or Skip reason banner (NO EMOJIS — pure SVG)
             if (block.completionNotes.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: const Color(0xFFF0FDF4),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
                 ),
-                child: Text(
-                  '📝 Ders/Görev Sonu Özeti: ${block.completionNotes}',
-                  style: TextStyle(
-                    color: Colors.green.shade900,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  children: [
+                    const AppSvgIcon(
+                      svgData: AppSvgs.noteSummary,
+                      size: 16,
+                      color: Color(0xFF15803D),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Ders/Görev Özeti: ${block.completionNotes}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF166534),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -687,73 +867,103 @@ class _HomeShellViewState extends State<HomeShellView> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: const Color(0xFFFEF2F2),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFECACA)),
                 ),
-                child: Text(
-                  '⚠️ Atlama Nedeni: ${block.skipReason}',
-                  style: TextStyle(
-                    color: Colors.red.shade900,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  children: [
+                    const AppSvgIcon(
+                      svgData: AppSvgs.alertCircle,
+                      size: 16,
+                      color: Color(0xFFB91C1C),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Atlama Nedeni: ${block.skipReason}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF991B1B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-            const Divider(height: 18),
-            // Action Buttons Bar
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  if (block.status == 'planned')
-                    FilledButton.tonalIcon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.blue.shade50,
-                        foregroundColor: Colors.blue.shade800,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      onPressed: () => vm.checkInToBlock(block),
-                      icon: const Icon(Icons.login, size: 16),
-                      label: const Text('Derse Geldim / Başladım'),
-                    ),
-                  if (block.status == 'planned') const SizedBox(width: 8),
-                  FilledButton.tonalIcon(
+
+            const SizedBox(height: 10),
+            // Action buttons row
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (block.status == 'planned')
+                  FilledButton.tonal(
+                    onPressed: () => vm.checkInToBlock(block),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.green.shade50,
-                      foregroundColor: Colors.green.shade800,
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      foregroundColor: const Color(0xFF0F172A),
                       visualDensity: VisualDensity.compact,
                     ),
-                    onPressed: () => _openCompletionSheet(block),
-                    icon: const Icon(Icons.fact_check_outlined, size: 16),
-                    label: const Text('Ders Bitti Özeti / Atladım'),
+                    child: Text(
+                      isRinging
+                          ? 'Derse Geldim (Alarmı Sustur)'
+                          : 'Derse Geldim / Başladım',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
+                OutlinedButton(
+                  onPressed: () => _openCompletionReviewSheet(context, vm, block),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text(
+                    'Bitti (Neler Yaptım) / Atla',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (block.voiceReminderEnabled)
+                  TextButton(
                     onPressed: () => vm.triggerVoiceReminderNow(block),
-                    icon: const Icon(Icons.volume_up, size: 16),
-                    label: const Text('Sesli Hatırlat'),
-                  ),
-                  if (block.phoneLockEnabled) ...[
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        foregroundColor: Colors.amber.shade900,
-                      ),
-                      onPressed: () => vm.activatePhoneLockdownShield(
-                        title:
-                            '${block.title} (${block.startTime} - ${block.endTime})',
-                      ),
-                      icon: const Icon(Icons.lock_clock, size: 16),
-                      label: const Text('Kilitle'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF4F46E5),
+                      visualDensity: VisualDensity.compact,
                     ),
-                  ],
-                ],
-              ),
+                    child: const Text(
+                      'Sesli & Bildirim Test',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                if (block.phoneLockEnabled)
+                  TextButton(
+                    onPressed: () => vm.activatePhoneLockdownShield(
+                      title:
+                          '${block.title} (${block.startTime} - ${block.endTime})',
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFB45309),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Kısıtlamayı Aç',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
@@ -761,24 +971,30 @@ class _HomeShellViewState extends State<HomeShellView> {
     );
   }
 
-  Widget _infoBadge(IconData icon, String text, Color color) {
+  Widget _featureTag({
+    required String svg,
+    required String text,
+    required Color color,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: color),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+          AppSvgIcon(svgData: svg, size: 12, color: color),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -786,26 +1002,87 @@ class _HomeShellViewState extends State<HomeShellView> {
     );
   }
 
-  Widget _buildCoupleComparisonTab() {
+  // ===========================================================================
+  // TAB 2: ORTAK & EŞ / PARTNER SENKRONİZASYONU + ÜYELİK & DAVET
+  // ===========================================================================
+  Widget _buildCoupleComparisonTab(BuildContext context, PlannerViewModel vm) {
+    final husbandList = vm.husbandBlocks;
+    final wifeList = vm.wifeBlocks;
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
       children: [
+        // Membership & Partner Invite Card
         Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEEF2FF),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFC7D2FE)),
-          ),
-          child: const Row(
+          padding: const EdgeInsets.all(16),
+          decoration: _minimalCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.favorite, color: Color(0xFF4F46E5)),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Yan Yana Eş Görünümü: Senin ve eşinin aynı saatlerdeki kişisel ve ortak planlarını tek ekranda karşılaştırabilirsin.',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const AppSvgIcon(
+                      svgData: AppSvgs.shareInvite,
+                      color: Color(0xFF0F766E),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Aktif Hesap: ${vm.activeDisplayName} (${vm.activeUserEmail})',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Davet Kodu: ${vm.familyProfile.inviteCode} • Ortak: ${vm.sharedBlocksOnly.length} Plan • Bağımsız: ${vm.personalBlocksOnly.length} Plan',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => _openAuthAndInviteModal(context, vm),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Üye Ol / Eş & Arkadaş Davet Et',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -816,17 +1093,17 @@ class _HomeShellViewState extends State<HomeShellView> {
           children: [
             Expanded(
               child: _buildPersonColumn(
-                title: 'İlker\'in Günü',
-                color: const Color(0xFF4F46E5),
-                blocks: vm.husbandBlocks,
+                title: 'İlker (Benim Günü)',
+                color: const Color(0xFF2563EB),
+                blocks: husbandList,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: _buildPersonColumn(
                 title: 'Eşimin Günü',
                 color: const Color(0xFFDB2777),
-                blocks: vm.wifeBlocks,
+                blocks: wifeList,
               ),
             ),
           ],
@@ -840,76 +1117,478 @@ class _HomeShellViewState extends State<HomeShellView> {
     required Color color,
     required List<ScheduleBlock> blocks,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        ...blocks.map(
-          (b) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${b.startTime} - ${b.endTime}',
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  b.title,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: _minimalCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  b.statusLabel,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const Divider(height: 18, color: Color(0xFFE2E8F0)),
+          ...blocks.map(
+            (b) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${b.startTime}-${b.endTime}',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        ),
+                      ),
+                      Text(
+                        b.ownerRole == 'shared' ? 'Ortak' : 'Bağımsız',
+                        style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    b.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // TAB 3: İLAÇ HATIRLATICI & SU HATIRLATICI + CİHAZ BİLDİRİMLERİ
+  // ===========================================================================
+  Widget _buildHealthWaterAndMedicationsTab(
+    BuildContext context,
+    PlannerViewModel vm,
+  ) {
+    final water = vm.activeWaterTracker;
+    final meds = vm.medicationReminders;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
+      children: [
+        // OS Notification Permission Banner
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: _minimalCardDecoration(),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const AppSvgIcon(
+                  svgData: AppSvgs.bellNotification,
+                  color: Color(0xFF0F766E),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vm.deviceNotificationsGranted
+                          ? 'Cihaz Bildirim İzni Aktif (iOS & Android)'
+                          : 'Cihaz Bildirim İzni Bekleniyor',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const Text(
+                      'İlaç, su ve ders hatırlatmaları doğrudan telefon bildirim merkezine gönderilir',
+                      style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: vm.requestDeviceNotificationPermissions,
+                child: const Text(
+                  'İzin Kontrol',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
         ),
+        const SizedBox(height: 14),
+
+        // WATER TRACKER CARD
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: _minimalCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const AppSvgIcon(
+                      svgData: AppSvgs.waterDrop,
+                      color: Color(0xFF0284C7),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Günlük Su Hatırlatıcı (${vm.activeDisplayName})',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          'Her ${water.reminderIntervalMinutes} dakikada bir cihaz bildirimi • ${water.completedCups}/${water.totalGoalCups} Bardak',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${water.currentIntakeMl} / ${water.dailyGoalMl} ml',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0284C7),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: water.progressRatio,
+                  minHeight: 10,
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  color: const Color(0xFF0284C7),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => vm.addWaterIntake(250),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        '+250 ml (Bardak)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => vm.addWaterIntake(500),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0284C7),
+                        side: const BorderSide(color: Color(0xFFBAE6FD)),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        '+500 ml (Şişe)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: vm.triggerWaterDeviceNotificationNow,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0F172A),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 11,
+                        horizontal: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Hatırlat',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // MEDICATION REMINDERS SECTION
+        Row(
+          children: [
+            const AppSvgIcon(
+              svgData: AppSvgs.pillCapsule,
+              color: Color(0xFF0F766E),
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'İlaç & Vitamin Hatırlatıcıları',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _openAddMedicationDialog(context, vm),
+              icon: const AppSvgIcon(
+                svgData: AppSvgs.plus,
+                color: Color(0xFF0F766E),
+                size: 15,
+              ),
+              label: const Text(
+                'Yeni İlaç Ekle',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F766E),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ...meds.map((med) => _buildMedicationCard(vm, med)),
       ],
     );
   }
 
-  Widget _buildFocusLockdownTab() {
+  Widget _buildMedicationCard(PlannerViewModel vm, MedicationReminder med) {
+    final roleLabel = med.ownerRole == 'wife'
+        ? 'Eşim'
+        : (med.ownerRole == 'husband' ? 'İlker' : 'Ortak');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: _minimalCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => vm.toggleMedicationTaken(med),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: med.takenToday
+                        ? const Color(0xFFDCFCE7)
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: AppSvgIcon(
+                    svgData: med.takenToday
+                        ? AppSvgs.checkCircle
+                        : AppSvgs.pillCapsule,
+                    color: med.takenToday
+                        ? const Color(0xFF15803D)
+                        : const Color(0xFF475569),
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            med.medicationName,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                              decoration: med.takenToday
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            roleLabel,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Saat ${med.reminderTime} • ${med.dosage} • ${med.mealRelation}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: () => vm.sendMedicationDeviceNotification(med),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: const Color(0xFF0F766E),
+                ),
+                icon: const AppSvgIcon(
+                  svgData: AppSvgs.bellNotification,
+                  color: Color(0xFF0F766E),
+                  size: 14,
+                ),
+                label: const Text(
+                  'Cihaza Bildir',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonal(
+                onPressed: () => vm.toggleMedicationTaken(med),
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  backgroundColor: med.takenToday
+                      ? const Color(0xFFDCFCE7)
+                      : const Color(0xFF0F172A),
+                  foregroundColor: med.takenToday
+                      ? const Color(0xFF166534)
+                      : Colors.white,
+                ),
+                child: Text(
+                  med.takenToday ? 'İçildi (Tamam)' : 'İçildi İşaretle',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // TAB 4: TELEFON KISITLAMA & ODAK KALKANI (SADECE ARAMALAR)
+  // ===========================================================================
+  Widget _buildFocusLockdownTab(BuildContext context, PlannerViewModel vm) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-            ),
+            color: const Color(0xFF0F172A),
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -917,15 +1596,19 @@ class _HomeShellViewState extends State<HomeShellView> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.phonelink_lock, color: Colors.amber, size: 26),
+                  AppSvgIcon(
+                    svgData: AppSvgs.shieldLock,
+                    color: Color(0xFF38BDF8),
+                    size: 24,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Telefon Kısıtlama & Sadece Aramalar Modu',
+                      'Telefon Kısıtlama & Odak Kalkanı',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 17,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -933,52 +1616,67 @@ class _HomeShellViewState extends State<HomeShellView> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Belirlediğiniz saatler arasında telefonu kullanım dışı bırakır; sadece eşinizden veya acil numaralardan gelen aramalara cevap vermenize izin verir.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+                'Belirlediğiniz saatler arasında telefonu kullanım dışı bırakır. '
+                'Yalnızca gelen telefon aramalarına cevap verebilir veya acil durumda eşinizi arayabilirsiniz.',
+                style: TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 13,
+                  height: 1.4,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
+                child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.amber.shade700,
-                    foregroundColor: Colors.black,
-                  ),
-                  onPressed: () => vm.activatePhoneLockdownShield(),
-                  icon: const Icon(Icons.shield),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      'Kısıtlama Kalkanını Şimdi Başlat (Test Et)',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    backgroundColor: const Color(0xFF38BDF8),
+                    foregroundColor: const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                  ),
+                  onPressed: () => vm.activatePhoneLockdownShield(
+                    title: 'Aile Odak Saati (Sadece Aramalar Açık)',
+                  ),
+                  child: const Text(
+                    'Şimdi Telefon Kısıtlama Modunu Başlat',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          'Planlı Telefon Kısıtlama Saatleri',
-          style: Theme.of(context).textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+        const SizedBox(height: 18),
+        const Text(
+          'Planlı Kısıtlama Saatleri',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 8),
         ...vm.focusSessions.map(
-          (session) => Card(
+          (session) => Container(
             margin: const EdgeInsets.only(bottom: 10),
+            decoration: _minimalCardDecoration(),
             child: SwitchListTile(
-              value: session.isActive,
-              onChanged: (_) => vm.toggleFocusSession(session),
               title: Text(
                 session.title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: Color(0xFF0F172A),
+                ),
               ),
               subtitle: Text(
-                'Saat: ${session.startTime} - ${session.endTime} • Sadece Aramalar Açık',
+                '${session.startTime} - ${session.endTime} • Sadece Aramalar Serbest',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
               ),
-              secondary: const Icon(Icons.phone_callback, color: Colors.indigo),
+              value: session.isActive,
+              onChanged: (_) => vm.toggleFocusSession(session),
             ),
           ),
         ),
@@ -986,9 +1684,15 @@ class _HomeShellViewState extends State<HomeShellView> {
     );
   }
 
-  Widget _buildStatsAndTrackingTab() {
+  // ===========================================================================
+  // TAB 5: TAKİP, DERS ÖZETLERİ & ATLANAN DERSLER
+  // ===========================================================================
+  Widget _buildAnalyticsAndSkippedTab(
+    BuildContext context,
+    PlannerViewModel vm,
+  ) {
     final completedBlocks = vm.allBlocks
-        .where((b) => b.status == 'completed')
+        .where((b) => b.status == 'completed' || b.completionNotes.isNotEmpty)
         .toList();
     final skippedBlocks = vm.allBlocks
         .where((b) => b.status == 'skipped')
@@ -1000,97 +1704,157 @@ class _HomeShellViewState extends State<HomeShellView> {
         Row(
           children: [
             Expanded(
-              child: _statCard(
-                'Tamamlanan',
-                '${vm.completedCount}',
-                Colors.green.shade700,
-                Icons.check_circle,
+              child: _metricCard(
+                label: 'Tamamlanan',
+                value: '${vm.completedCount}',
+                color: const Color(0xFF15803D),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
-              child: _statCard(
-                'Derste / Aktif',
-                '${vm.checkedInCount}',
-                Colors.blue.shade700,
-                Icons.play_circle_fill,
+              child: _metricCard(
+                label: 'Aktif / Derste',
+                value: '${vm.checkedInCount}',
+                color: const Color(0xFF0284C7),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
-              child: _statCard(
-                'Atlanan',
-                '${vm.skippedCount}',
-                Colors.red.shade700,
-                Icons.event_busy,
+              child: _metricCard(
+                label: 'Atlanan',
+                value: '${vm.skippedCount}',
+                color: const Color(0xFFB91C1C),
               ),
             ),
           ],
         ),
         const SizedBox(height: 18),
-        Text(
-          'Ders / İş Bitiminde Yazılan Özetler (Neler Yaptık?)',
-          style: Theme.of(context).textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+        const Text(
+          'Ders & İş Sonu Neler Yapıldı? (Tamamlanan Notlar)',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 8),
         if (completedBlocks.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Henüz tamamlanan ders/görev özeti yok. Bir plan üzerinde "Ders Bitti Özeti" butonuna tıklayarak neler yaptığını kaydedebilirsin.',
-              ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: _minimalCardDecoration(),
+            child: const Text(
+              'Henüz tamamlanan ders/iş özeti girilmedi.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
             ),
           )
         else
           ...completedBlocks.map(
-            (b) => Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: const Icon(Icons.verified, color: Colors.green),
-                title: Text(
-                  '${b.title} (${b.startTime} - ${b.endTime}) • ${b.ownerLabel}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  b.completionNotes.isEmpty
-                      ? 'Alt görevler tamamlandı (${b.completedChecklistCount}/${b.checklistItems.length})'
-                      : b.completionNotes,
-                ),
+            (b) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: _minimalCardDecoration(),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppSvgIcon(
+                    svgData: AppSvgs.checkCircle,
+                    color: Color(0xFF15803D),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${b.title} (${b.startTime} - ${b.endTime})',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          b.completionNotes.isEmpty
+                              ? 'Tüm alt maddeler tamamlandı.'
+                              : b.completionNotes,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         const SizedBox(height: 18),
-        Text(
-          'Atlanan Dersler & Planlar Takibi',
-          style: Theme.of(context).textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+        const Text(
+          'Atlanan / Gidilmeyen Ders & Plan Takibi',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+          ),
         ),
         const SizedBox(height: 8),
         if (skippedBlocks.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Harika! Bugün atlanan hiçbir ders veya plan yok.'),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: _minimalCardDecoration(),
+            child: const Text(
+              'Harika! Bugün hiçbir ders veya plan atlanmadı.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
             ),
           )
         else
           ...skippedBlocks.map(
-            (b) => Card(
-              color: Colors.red.shade50,
-              margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: Icon(Icons.warning_amber, color: Colors.red.shade800),
-                title: Text(
-                  '${b.title} (${b.startTime} - ${b.endTime}) • ${b.ownerLabel}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text('Atlama nedeni: ${b.skipReason}'),
-                trailing: TextButton(
-                  onPressed: () => vm.checkInToBlock(b),
-                  child: const Text('Telafi Et'),
-                ),
+            (b) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: _minimalCardDecoration(),
+              child: Row(
+                children: [
+                  const AppSvgIcon(
+                    svgData: AppSvgs.alertCircle,
+                    color: Color(0xFFB91C1C),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${b.title} (${b.startTime} - ${b.endTime})',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Neden: ${b.skipReason}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFB91C1C),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => vm.checkInToBlock(b),
+                    child: const Text(
+                      'Telafi Et',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1098,29 +1862,253 @@ class _HomeShellViewState extends State<HomeShellView> {
     );
   }
 
-  Widget _statCard(String label, String value, Color color, IconData icon) {
+  Widget _metricCard({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: _minimalCardDecoration(),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              color: color,
               fontSize: 22,
               fontWeight: FontWeight.w800,
+              color: color,
             ),
           ),
+          const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  BoxDecoration _minimalCardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0xFFE2E8F0)),
+    );
+  }
+
+  void _openAuthAndInviteModal(BuildContext context, PlannerViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AuthAndInviteSheet(viewModel: vm),
+    );
+  }
+
+  void _openBlockEditor(
+    BuildContext context,
+    PlannerViewModel vm,
+    ScheduleBlock? existing,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => BlockEditorSheet(
+        familyId: vm.familyProfile.id,
+        planDate: vm.formattedSelectedDate,
+        existingBlock: existing,
+        onSave: vm.saveOrCreateBlock,
+      ),
+    );
+  }
+
+  void _openCompletionReviewSheet(
+    BuildContext context,
+    PlannerViewModel vm,
+    ScheduleBlock block,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => CompletionReviewSheet(
+        block: block,
+        onComplete: (notes, items) => vm.completeBlockWithSummary(
+          block: block,
+          completionNotes: notes,
+          updatedChecklist: items,
+        ),
+        onSkip: (reason) =>
+            vm.skipBlockWithReason(block: block, skipReason: reason),
+      ),
+    );
+  }
+
+  void _openAddMedicationDialog(BuildContext context, PlannerViewModel vm) {
+    final nameCtrl = TextEditingController();
+    final doseCtrl = TextEditingController(text: '1 Kapsül');
+    final timeCtrl = TextEditingController(text: '13:00');
+    String mealRelation = 'Tok Karnına';
+    String ownerRole = vm.activeUserRole;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Yeni İlaç / Vitamin Hatırlatıcı'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'İlaç / Takviye Adı (Örn: B12 Vitamini)',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: doseCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Dozaj (Örn: 1 Tablet)',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: timeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Hatırlatma Saati (SS:DD)',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: mealRelation,
+                  decoration: const InputDecoration(labelText: 'Kullanım Şekli'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Tok Karnına',
+                      child: Text('Tok Karnına'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Aç Karnına',
+                      child: Text('Aç Karnına'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Bol Su İle',
+                      child: Text('Bol Su İle'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => mealRelation = v);
+                  },
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: ownerRole,
+                  decoration: const InputDecoration(labelText: 'Kimin İlacı?'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'husband',
+                      child: Text('İlker (Ben)'),
+                    ),
+                    DropdownMenuItem(value: 'wife', child: Text('Eşim')),
+                    DropdownMenuItem(
+                      value: 'shared',
+                      child: Text('Ortak (İkimiz)'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => ownerRole = v);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('İptal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                vm.addMedicationReminder(
+                  MedicationReminder(
+                    familyId: vm.familyProfile.id,
+                    ownerRole: ownerRole,
+                    medicationName: nameCtrl.text.trim(),
+                    dosage: doseCtrl.text.trim(),
+                    reminderTime: timeCtrl.text.trim(),
+                    mealRelation: mealRelation,
+                    takenToday: false,
+                  ),
+                );
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Kaydet & Bildirim Kur'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openFamilySettingsDialog(BuildContext context, PlannerViewModel vm) {
+    final cityCtrl = TextEditingController(text: vm.familyProfile.city);
+    final wakeCtrl = TextEditingController(text: vm.familyProfile.wakeUpTime);
+    final sleepCtrl = TextEditingController(text: vm.familyProfile.sleepTime);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Aile Rutini & Namaz Şehri Ayarları'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: cityCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Namaz Vakti Şehri (Örn: Istanbul, Ankara)',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: wakeCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Günlük Uyanış Saati (Örn: 05:00)',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: sleepCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Günlük Uyku Saati (Örn: 23:00)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              vm.updateFamilySettings(
+                city: cityCtrl.text.trim(),
+                wakeUpTime: wakeCtrl.text.trim(),
+                sleepTime: sleepCtrl.text.trim(),
+              );
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Kaydet'),
           ),
         ],
       ),

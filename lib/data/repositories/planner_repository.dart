@@ -14,6 +14,8 @@ class PlannerRepository {
     required this._prayerService,
   });
 
+  User? get currentUser => _supabaseService.currentUser;
+
   Future<void> ensureSignedInAsRole(String role) async {
     await _supabaseService.signInAsRole(role);
   }
@@ -22,6 +24,22 @@ class PlannerRepository {
     await _supabaseService.signInWithCredentials(
       email: email,
       password: password,
+    );
+  }
+
+  Future<String> registerNewMember({
+    required String displayName,
+    required String email,
+    required String password,
+    required String roleLabel,
+    String? inviteCode,
+  }) {
+    return _supabaseService.signUpNewMember(
+      displayName: displayName,
+      email: email,
+      password: password,
+      roleLabel: roleLabel,
+      inviteCode: inviteCode,
     );
   }
 
@@ -133,25 +151,59 @@ class PlannerRepository {
     return _supabaseService.toggleFocusSession(session);
   }
 
+  // Medication Reminders
+  Future<List<MedicationReminder>> loadMedicationReminders(int familyId) {
+    return _supabaseService.fetchMedicationReminders(familyId);
+  }
+
+  Future<MedicationReminder> addMedicationReminder(
+    MedicationReminder reminder,
+  ) {
+    return _supabaseService.createMedicationReminder(reminder);
+  }
+
+  Future<MedicationReminder> toggleMedicationTaken(
+    MedicationReminder reminder,
+    String todayIso,
+  ) {
+    return _supabaseService.toggleMedicationTaken(reminder, todayIso);
+  }
+
+  Future<void> removeMedicationReminder(int id) {
+    return _supabaseService.deleteMedicationReminder(id);
+  }
+
+  // Water Trackers
+  Future<List<WaterTracker>> loadWaterTrackers(int familyId) {
+    return _supabaseService.fetchWaterTrackers(familyId);
+  }
+
+  Future<WaterTracker> updateWaterIntake({
+    required WaterTracker tracker,
+    required int newIntakeMl,
+  }) {
+    return _supabaseService.updateWaterIntake(
+      tracker: tracker,
+      newIntakeMl: newIntakeMl,
+    );
+  }
+
+  // Partner Invitations
+  Future<List<PartnerInvitation>> loadPartnerInvitations(int familyId) {
+    return _supabaseService.fetchPartnerInvitations(familyId);
+  }
+
+  Future<PartnerInvitation> addPartnerInvitation(PartnerInvitation invitation) {
+    return _supabaseService.createPartnerInvitation(invitation);
+  }
+
   RealtimeChannel subscribeToRealtime({
     required int familyId,
     required VoidCallback onChanged,
   }) {
-    return _supabaseService.subscribeToRealtimeChangesWrapper(
+    return _supabaseService.subscribeToFamilyChanges(
       familyId: familyId,
       onDataChanged: onChanged,
-    );
-  }
-}
-
-extension on SupabaseFamilyService {
-  RealtimeChannel subscribeToRealtimeChangesWrapper({
-    required int familyId,
-    required VoidCallback onDataChanged,
-  }) {
-    return subscribeToFamilyChanges(
-      familyId: familyId,
-      onDataChanged: onDataChanged,
     );
   }
 }

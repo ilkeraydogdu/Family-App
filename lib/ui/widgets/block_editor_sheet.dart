@@ -319,6 +319,7 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _prayerName,
                       decoration: const InputDecoration(
                         labelText: 'Baz Alınacak Vakit',
@@ -345,6 +346,7 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<int>(
+                      isExpanded: true,
                       initialValue: _prayerOffsetMinutes,
                       decoration: const InputDecoration(
                         labelText: 'Vakte Göre Fark',

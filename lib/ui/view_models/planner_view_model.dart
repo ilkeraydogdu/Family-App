@@ -4,14 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/repositories/planner_repository.dart';
+import '../../data/services/device_notification_service.dart';
 import '../../data/services/voice_reminder_service.dart';
 import '../../domain/models/family_models.dart';
 
 class PlannerViewModel extends ChangeNotifier {
   final PlannerRepository _repository;
   final VoiceReminderService _voiceService;
+  final DeviceNotificationService _notificationService;
 
-  PlannerViewModel({required this._repository, required this._voiceService});
+  PlannerViewModel({
+    required this._repository,
+    required this._voiceService,
+    DeviceNotificationService? notificationService,
+  }) : _notificationService =
+           notificationService ?? DeviceNotificationService();
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;
@@ -21,6 +28,12 @@ class PlannerViewModel extends ChangeNotifier {
 
   String _activeUserRole = 'husband'; // 'husband' (İlker) | 'wife' (Eşim)
   String get activeUserRole => _activeUserRole;
+
+  String _activeDisplayName = 'İlker';
+  String get activeDisplayName => _activeDisplayName;
+
+  String _activeUserEmail = 'ilker@familyapp.app';
+  String get activeUserEmail => _activeUserEmail;
 
   String _timelineFilter = 'all'; // 'all' | 'husband' | 'wife' | 'shared'
   String get timelineFilter => _timelineFilter;
@@ -48,6 +61,15 @@ class PlannerViewModel extends ChangeNotifier {
   List<FocusSession> _focusSessions = [];
   List<FocusSession> get focusSessions => _focusSessions;
 
+  List<MedicationReminder> _medicationReminders = [];
+  List<MedicationReminder> get medicationReminders => _medicationReminders;
+
+  List<WaterTracker> _waterTrackers = [];
+  List<WaterTracker> get waterTrackers => _waterTrackers;
+
+  List<PartnerInvitation> _partnerInvitations = [];
+  List<PartnerInvitation> get partnerInvitations => _partnerInvitations;
+
   bool _isPhoneLockShieldActive = false;
   bool get isPhoneLockShieldActive => _isPhoneLockShieldActive;
 
@@ -58,11 +80,36 @@ class PlannerViewModel extends ChangeNotifier {
   String? _lastSpokenReminder;
   String? get lastSpokenReminder => _lastSpokenReminder;
 
+  bool get deviceNotificationsGranted => _notificationService.permissionGranted;
+
   RealtimeChannel? _realtimeChannel;
   Timer? _minuteScheduleWatcher;
 
   String get formattedSelectedDate =>
       _selectedDate.toIso8601String().substring(0, 10);
+
+  WaterTracker get activeWaterTracker {
+    final match = _waterTrackers.where((w) => w.ownerRole == _activeUserRole);
+    if (match.isNotEmpty) return match.first;
+    return WaterTracker(
+      familyId: _familyProfile.id,
+      ownerRole: _activeUserRole,
+      dailyGoalMl: 2500,
+      currentIntakeMl: 1250,
+      cupSizeMl: 250,
+      reminderIntervalMinutes: 90,
+      reminderEnabled: true,
+    );
+  }
+
+  List<MedicationReminder> get filteredMedications {
+    if (_timelineFilter == 'all') return _medicationReminders;
+    return _medicationReminders
+        .where(
+          (m) => m.ownerRole == _timelineFilter || m.ownerRole == 'shared',
+        )
+        .toList();
+  }
 
   List<ScheduleBlock> get filteredBlocks {
     final weekday = _selectedDate.weekday; // 1 = Pazartesi .. 7 = Pazar
@@ -87,6 +134,14 @@ class PlannerViewModel extends ChangeNotifier {
     return dayBlocks.where((b) => b.ownerRole == _timelineFilter).toList();
   }
 
+  /// Independent personal plans (Bağımsız / Kişisel Planlar) for active user
+  List<ScheduleBlock> get personalBlocksOnly =>
+      _blocks.where((b) => b.ownerRole == _activeUserRole).toList();
+
+  /// Shared partner plans (Eş / Partner ile Ortak Planlar)
+  List<ScheduleBlock> get sharedBlocksOnly =>
+      _blocks.where((b) => b.ownerRole == 'shared').toList();
+
   List<ScheduleBlock> get husbandBlocks => _blocks
       .where((b) => b.ownerRole == 'husband' || b.ownerRole == 'shared')
       .toList();
@@ -102,6 +157,9 @@ class PlannerViewModel extends ChangeNotifier {
       _blocks.where((b) => b.status == 'checked_in').length;
 
   int get skippedCount => _blocks.where((b) => b.status == 'skipped').length;
+
+  int get takenMedicationCount =>
+      _medicationReminders.where((m) => m.takenToday).length;
 
   double get completionRate {
     if (_blocks.isEmpty) return 0;
@@ -119,7 +177,9 @@ class PlannerViewModel extends ChangeNotifier {
 
     try {
       await _voiceService.init();
+      unawaited(_notificationService.initAndRequestPermissions());
       await _repository.ensureSignedInAsRole(_activeUserRole);
+      _syncCurrentUserMetadata();
       _familyProfile = await _repository.loadFamilyProfile();
       _prayerTimes = await _repository.loadLivePrayerTimes(
         _familyProfile.city,
@@ -137,6 +197,19 @@ class PlannerViewModel extends ChangeNotifier {
     }
   }
 
+  void _syncCurrentUserMetadata() {
+    final user = _repository.currentUser;
+    if (user != null) {
+      _activeUserEmail = user.email ?? _activeUserEmail;
+      final metaName = user.userMetadata?['display_name']?.toString();
+      if (metaName != null && metaName.trim().isNotEmpty) {
+        _activeDisplayName = metaName.trim();
+      } else {
+        _activeDisplayName = _activeUserRole == 'wife' ? 'Eşim' : 'İlker';
+      }
+    }
+  }
+
   Future<void> _reloadBlocksAndSessions({bool alignPrayerTimes = false}) async {
     final loadedBlocks = await _repository.loadScheduleBlocks(
       familyId: _familyProfile.id,
@@ -151,6 +224,13 @@ class PlannerViewModel extends ChangeNotifier {
       _blocks = loadedBlocks;
     }
     _focusSessions = await _repository.loadFocusSessions(_familyProfile.id);
+    _medicationReminders = await _repository.loadMedicationReminders(
+      _familyProfile.id,
+    );
+    _waterTrackers = await _repository.loadWaterTrackers(_familyProfile.id);
+    _partnerInvitations = await _repository.loadPartnerInvitations(
+      _familyProfile.id,
+    );
     notifyListeners();
   }
 
@@ -178,7 +258,6 @@ class PlannerViewModel extends ChangeNotifier {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
     for (final block in filteredBlocks) {
-      // Check if reminder time matches current minute
       if (block.voiceReminderEnabled && block.status == 'planned') {
         final parts = block.startTime.split(':');
         if (parts.length >= 2) {
@@ -194,7 +273,6 @@ class PlannerViewModel extends ChangeNotifier {
         }
       }
 
-      // Check if a block with phone_lock_enabled is starting right now
       if (block.phoneLockEnabled &&
           block.startTime == currentHhmm &&
           !_isPhoneLockShieldActive) {
@@ -203,17 +281,104 @@ class PlannerViewModel extends ChangeNotifier {
         );
       }
     }
+
+    for (final med in _medicationReminders) {
+      if (!med.takenToday && med.reminderTime == currentHhmm) {
+        sendMedicationDeviceNotification(med);
+      }
+    }
+  }
+
+  Future<bool> requestDeviceNotificationPermissions() async {
+    final granted = await _notificationService.requestPermissionsExplicitly();
+    notifyListeners();
+    return granted;
   }
 
   Future<void> switchActivePersonRole(String role) async {
     if (_activeUserRole == role) return;
     _activeUserRole = role;
+    _activeDisplayName = role == 'wife' ? 'Eşim' : 'İlker';
     notifyListeners();
     try {
       await _repository.ensureSignedInAsRole(role);
+      _syncCurrentUserMetadata();
       await _reloadBlocksAndSessions();
     } catch (e) {
       debugPrint('Kullanıcı geçiş uyarısı: $e');
+    }
+  }
+
+  Future<String?> registerOrLoginUser({
+    required bool isSignUp,
+    required String displayName,
+    required String email,
+    required String password,
+    required String roleLabel,
+    String? inviteCode,
+  }) async {
+    try {
+      if (isSignUp) {
+        await _repository.registerNewMember(
+          displayName: displayName,
+          email: email,
+          password: password,
+          roleLabel: roleLabel,
+          inviteCode: inviteCode,
+        );
+      } else {
+        await _repository.signInCustom(email, password);
+      }
+      _activeUserRole = roleLabel;
+      _activeDisplayName = displayName.trim().isNotEmpty
+          ? displayName.trim()
+          : (roleLabel == 'wife' ? 'Eşim' : 'İlker');
+      _syncCurrentUserMetadata();
+      _familyProfile = await _repository.loadFamilyProfile();
+      await _reloadBlocksAndSessions();
+      await _notificationService.sendDeviceNotification(
+        id: 7001,
+        title: 'Hesap Bağlantısı Aktif',
+        body:
+            '$_activeDisplayName olarak giriş yapıldı. Ortak ve kişisel planlar senkronize edildi.',
+      );
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<void> createPartnerInvite({
+    required String inviteeLabel,
+    required String relationshipType,
+    String? inviteeEmail,
+  }) async {
+    try {
+      final code =
+          '${_familyProfile.inviteCode}-${DateTime.now().second.toString().padLeft(2, '0')}';
+      final created = await _repository.addPartnerInvitation(
+        PartnerInvitation(
+          familyId: _familyProfile.id,
+          inviterRole: _activeUserRole,
+          inviteeLabel: inviteeLabel.trim(),
+          inviteeEmail: inviteeEmail?.trim(),
+          relationshipType: relationshipType,
+          inviteCode: code,
+          status: 'pending',
+          allowSharedPlans: true,
+        ),
+      );
+      _partnerInvitations.insert(0, created);
+      await _notificationService.sendDeviceNotification(
+        id: 7002,
+        title: 'Davet Kodu Oluşturuldu: $code',
+        body:
+            '$inviteeLabel ile ortak veya bağımsız plan paylaşımı için davet hazır.',
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Davet oluşturma hatası: $e');
     }
   }
 
@@ -256,6 +421,12 @@ class PlannerViewModel extends ChangeNotifier {
       checkedInAt: DateTime.now(),
     );
     await saveOrCreateBlock(updated);
+    await _notificationService.sendDeviceNotification(
+      id: (block.id ?? 100) + 1000,
+      title: 'Katılım Onaylandı: ${block.title}',
+      body:
+          'Sesli tekrarlayan hatırlatıcı durduruldu. İyi çalışmalar, $_activeDisplayName!',
+    );
   }
 
   /// User toggles a sub-task checkbox ("tık attığı yer").
@@ -307,6 +478,12 @@ class PlannerViewModel extends ChangeNotifier {
   }
 
   void triggerVoiceReminderNow(ScheduleBlock block) {
+    _notificationService.sendDeviceNotification(
+      id: (block.id ?? 1) + 2000,
+      title: 'Plan Hatırlatıcı: ${block.title}',
+      body:
+          '${block.startTime} - ${block.endTime} (${block.remindBeforeMinutes} dk kala hatırlatma • ${block.repeatCount}x tekrar)',
+    );
     _voiceService.startRepeatingReminder(
       block: block,
       onSpoken: (msg) {
@@ -320,6 +497,124 @@ class PlannerViewModel extends ChangeNotifier {
     await _voiceService.stopAll();
     _lastSpokenReminder = null;
     notifyListeners();
+  }
+
+  // ===========================================================================
+  // MEDICATION & WATER TRACKER ACTIONS + OS NOTIFICATIONS
+  // ===========================================================================
+
+  Future<void> toggleMedicationTaken(MedicationReminder reminder) async {
+    try {
+      final updated = await _repository.toggleMedicationTaken(
+        reminder,
+        formattedSelectedDate,
+      );
+      final idx = _medicationReminders.indexWhere((m) => m.id == updated.id);
+      if (idx >= 0) {
+        _medicationReminders[idx] = updated;
+      }
+      if (updated.takenToday) {
+        await _notificationService.sendDeviceNotification(
+          id: (updated.id ?? 10) + 4000,
+          title: 'İlaç Alındı: ${updated.medicationName}',
+          body: '${updated.dosage} (${updated.mealRelation}) içildi olarak işaretlendi.',
+        );
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('İlaç durumu güncelleme hatası: $e');
+    }
+  }
+
+  Future<void> addMedicationReminder(MedicationReminder reminder) async {
+    try {
+      final created = await _repository.addMedicationReminder(reminder);
+      _medicationReminders.add(created);
+      _medicationReminders.sort(
+        (a, b) => a.reminderTime.compareTo(b.reminderTime),
+      );
+      await _notificationService.sendDeviceNotification(
+        id: (created.id ?? 20) + 4100,
+        title: 'İlaç Hatırlatıcı Kuruldu: ${created.medicationName}',
+        body:
+            'Her gün saat ${created.reminderTime} (${created.mealRelation}) cihaz bildirimi gönderilecek.',
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('İlaç ekleme hatası: $e');
+    }
+  }
+
+  Future<void> deleteMedicationReminder(int id) async {
+    try {
+      await _repository.removeMedicationReminder(id);
+      _medicationReminders.removeWhere((m) => m.id == id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('İlaç silme hatası: $e');
+    }
+  }
+
+  Future<void> sendMedicationDeviceNotification(
+    MedicationReminder reminder,
+  ) async {
+    final msg =
+        '${reminder.medicationName} (${reminder.dosage}) alma vakti geldi. ${reminder.mealRelation} alınız.';
+    _lastSpokenReminder = msg;
+    notifyListeners();
+    await _notificationService.sendDeviceNotification(
+      id: (reminder.id ?? 30) + 4500,
+      title: 'İlaç Vakti: ${reminder.medicationName}',
+      body: msg,
+    );
+  }
+
+  Future<void> addWaterIntake(int deltaMl) async {
+    try {
+      final current = activeWaterTracker;
+      final nextMl = (current.currentIntakeMl + deltaMl).clamp(0, 10000);
+      final updated = await _repository.updateWaterIntake(
+        tracker: current,
+        newIntakeMl: nextMl,
+      );
+      final idx = _waterTrackers.indexWhere(
+        (w) => w.ownerRole == updated.ownerRole,
+      );
+      if (idx >= 0) {
+        _waterTrackers[idx] = updated;
+      } else {
+        _waterTrackers.add(updated);
+      }
+      if (deltaMl > 0) {
+        await _notificationService.sendDeviceNotification(
+          id: 5100,
+          title: 'Su Takibi Güncellendi (+$deltaMl ml)',
+          body:
+              'Günlük su tüketiminiz: ${updated.currentIntakeMl} / ${updated.dailyGoalMl} ml (%${(updated.progressRatio * 100).round()}).',
+        );
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Su takibi güncelleme hatası: $e');
+    }
+  }
+
+  Future<void> triggerWaterDeviceNotificationNow() async {
+    final tracker = activeWaterTracker;
+    final remaining = (tracker.dailyGoalMl - tracker.currentIntakeMl).clamp(
+      0,
+      10000,
+    );
+    final msg = remaining > 0
+        ? 'Su içme vakti!1 bardak (${tracker.cupSizeMl} ml) su için. Hedefe kalan: $remaining ml.'
+        : 'Tebrikler! Günlük ${tracker.dailyGoalMl} ml su hedefinizi tamamladınız.';
+    _lastSpokenReminder = msg;
+    notifyListeners();
+    await _notificationService.sendDeviceNotification(
+      id: 5200,
+      title: 'Su Hatırlatıcı (${tracker.currentIntakeMl}/${tracker.dailyGoalMl} ml)',
+      body: msg,
+    );
   }
 
   Future<void> saveOrCreateBlock(ScheduleBlock block) async {

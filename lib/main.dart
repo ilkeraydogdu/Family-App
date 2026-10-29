@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/supabase_config.dart';
 import 'data/repositories/planner_repository.dart';
+import 'data/services/device_notification_service.dart';
 import 'data/services/prayer_time_service.dart';
 import 'data/services/supabase_family_service.dart';
 import 'data/services/voice_reminder_service.dart';
@@ -20,6 +21,7 @@ Future<void> main() async {
   final supabaseService = SupabaseFamilyService();
   final prayerService = PrayerTimeService();
   final voiceService = VoiceReminderService();
+  final notificationService = DeviceNotificationService();
   final repository = PlannerRepository(
     supabaseService: supabaseService,
     prayerService: prayerService,
@@ -27,6 +29,7 @@ Future<void> main() async {
   final viewModel = PlannerViewModel(
     repository: repository,
     voiceService: voiceService,
+    notificationService: notificationService,
   )..initialize();
 
   runApp(FamilyPlannerApp(viewModel: viewModel));
@@ -44,7 +47,14 @@ class FamilyPlannerApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF4F46E5),
+        scaffoldBackgroundColor: const Color(0xFFF6F7F9),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E293B),
+          primary: const Color(0xFF1E293B),
+          secondary: const Color(0xFF0F766E),
+          surface: Colors.white,
+        ),
+        fontFamily: 'SF Pro Display',
       ),
       home: HomeShellView(viewModel: viewModel),
     );
