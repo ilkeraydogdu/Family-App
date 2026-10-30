@@ -42,11 +42,18 @@ class PlannerViewModel extends ChangeNotifier {
   String _activeDisplayName = 'İlker';
   String get activeDisplayName => _activeDisplayName;
 
+  String _activeUsername = 'ilker';
+  String get activeUsername => _activeUsername;
+  String get activeUsernameHandle => '@$_activeUsername';
+
   String _activeUserEmail = '';
   String get activeUserEmail => _activeUserEmail;
 
   List<String> _connectedMemberNames = const ['İlker', 'Neslihan'];
   List<String> get connectedMemberNames => _connectedMemberNames;
+
+  List<MemberAccountProfile> _memberProfiles = [];
+  List<MemberAccountProfile> get memberProfiles => _memberProfiles;
 
   /// 'all' (Benim Kişisel + Ortak) | 'personal' (Sadece Kişisel) | 'shared' (Sadece Ortak)
   String _timelineFilter = 'all';
@@ -178,7 +185,35 @@ class PlannerViewModel extends ChangeNotifier {
     final others = _connectedMemberNames
         .where((n) => n.toLowerCase() != _activeDisplayName.toLowerCase())
         .toList();
-    return others.isEmpty ? const ['Neslihan'] : others;
+    return others;
+  }
+
+  /// Active partner handle (e.g. '@neslihan' or '@ilker')
+  String get primaryPartnerHandle {
+    final otherProfile = _memberProfiles
+        .where((m) => m.username.toLowerCase() != _activeUsername.toLowerCase())
+        .firstOrNull;
+    if (otherProfile != null) {
+      return otherProfile.formattedHandle;
+    }
+    return _memberRoleKey == 'wife' ? '@ilker' : '@neslihan';
+  }
+
+  bool get isPartnerConnectionActive {
+    final myProfile = _memberProfiles
+        .where((m) => m.username.toLowerCase() == _activeUsername.toLowerCase())
+        .firstOrNull;
+    if (myProfile != null) {
+      return myProfile.connectionStatus == 'connected';
+    }
+    return true;
+  }
+
+  bool get isPartnerSharingPaused {
+    final myProfile = _memberProfiles
+        .where((m) => m.username.toLowerCase() == _activeUsername.toLowerCase())
+        .firstOrNull;
+    return myProfile?.connectionStatus == 'paused';
   }
 
   int get completedCount =>
@@ -323,6 +358,18 @@ class PlannerViewModel extends ChangeNotifier {
       } else {
         _activeDisplayName = isSecondMember ? 'Neslihan' : 'İlker';
       }
+
+      if (isSecondMember) {
+        _activeUsername = 'neslihan';
+      } else if (_activeUserEmail.toLowerCase().startsWith('ilker@')) {
+        _activeUsername = 'ilker';
+      } else {
+        _activeUsername = SupabaseConfig.normalizeUsernameHandle(
+          _activeUserEmail.isNotEmpty
+              ? _activeUserEmail.split('@').first
+              : _activeDisplayName,
+        );
+      }
     }
   }
 
@@ -349,27 +396,30 @@ class PlannerViewModel extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final cleanEmail = email.trim().toLowerCase();
+      final cleanHandle = SupabaseConfig.normalizeUsernameHandle(email);
+      final internalAuthEmail =
+          SupabaseConfig.usernameToInternalAuthIdentity(email);
       final inferredRole =
-          (cleanEmail.contains('esim') || cleanEmail.contains('neslihan'))
+          (cleanHandle == 'neslihan' || cleanHandle == 'esim')
               ? 'wife'
               : 'husband';
 
       if (isSignUp) {
         await _repository.registerNewMember(
           displayName: displayName,
-          email: cleanEmail,
+          email: internalAuthEmail,
           password: password,
           roleLabel: inferredRole,
           inviteCode: inviteCode,
         );
       } else {
-        await _repository.signInCustom(cleanEmail, password);
+        await _repository.signInCustom(internalAuthEmail, password);
       }
 
       _syncCurrentUserMetadata();
       if (isSignUp && displayName.trim().isNotEmpty) {
         _activeDisplayName = displayName.trim();
+        _activeUsername = cleanHandle;
       }
       _isAuthenticated = _repository.currentUser != null;
 
@@ -377,7 +427,7 @@ class PlannerViewModel extends ChangeNotifier {
         await _loadAuthenticatedWorkspace();
         await _notificationService.sendDeviceNotification(
           id: 7001,
-          title: 'Hoş Geldin, $_activeDisplayName',
+          title: 'Hoş Geldin, $_activeDisplayName ($activeUsernameHandle)',
           body:
               'Kişisel ajandanız ve ortak planlarınız güvenli şekilde senkronize edildi.',
         );
@@ -393,6 +443,9 @@ class PlannerViewModel extends ChangeNotifier {
 
   Future<void> _reloadBlocksAndSessions({bool alignPrayerTimes = false}) async {
     if (!_isAuthenticated) return;
+    _memberProfiles = await _repository.loadFamilyMemberProfiles(
+      _familyProfile.id,
+    );
     final loadedBlocks = await _repository.loadScheduleBlocks(
       familyId: _familyProfile.id,
       planDate: formattedSelectedDate,
@@ -487,31 +540,134 @@ class PlannerViewModel extends ChangeNotifier {
     String? inviteeEmail,
   }) async {
     try {
+      final cleanTargetHandle = SupabaseConfig.normalizeUsernameHandle(
+        inviteeEmail ?? inviteeLabel,
+      );
       final code =
           '${_familyProfile.inviteCode}-${DateTime.now().second.toString().padLeft(2, '0')}';
       final created = await _repository.addPartnerInvitation(
         PartnerInvitation(
           familyId: _familyProfile.id,
           inviterName: _activeDisplayName,
+          inviterUsername: _activeUsername,
           inviteeLabel: inviteeLabel.trim(),
-          inviteeEmail: inviteeEmail?.trim(),
+          targetUsername: cleanTargetHandle,
           relationshipType: relationshipType,
           inviteCode: code,
           status: 'pending',
+          sharingPaused: false,
           allowSharedPlans: true,
         ),
       );
       _partnerInvitations.insert(0, created);
       await _notificationService.sendDeviceNotification(
         id: 7002,
-        title: 'Ortak Plan Davet Kodu: $code',
+        title: 'Ortak Bağlantı İsteği Gönderildi (@$cleanTargetHandle)',
         body:
-            '$inviteeLabel ile yalnızca ortak seçilen planları paylaşmak üzere davet oluşturuldu.',
+            '@$cleanTargetHandle ($inviteeLabel) kullanıcısına ortak plan daveti gönderildi (Kod: $code).',
       );
       notifyListeners();
     } catch (e) {
       debugPrint('Davet oluşturma hatası: $e');
     }
+  }
+
+  Future<void> acceptOrReconnectPartnerInvitation(
+    PartnerInvitation invitation,
+  ) async {
+    try {
+      if (invitation.id != null) {
+        final updated = await _repository.updatePartnerInvitation(
+          id: invitation.id!,
+          status: 'accepted',
+          sharingPaused: false,
+        );
+        final idx = _partnerInvitations.indexWhere((i) => i.id == updated.id);
+        if (idx >= 0) _partnerInvitations[idx] = updated;
+      }
+      await _repository.updateFamilyConnectionStatus(
+        familyId: _familyProfile.id,
+        connectionStatus: 'connected',
+      );
+      await _reloadBlocksAndSessions(alignPrayerTimes: false);
+    } catch (e) {
+      debugPrint('Ortak bağlantı onaylama hatası: $e');
+    }
+  }
+
+  Future<void> togglePausePartnerSharing(PartnerInvitation invitation) async {
+    try {
+      final nextPaused = !invitation.sharingPaused;
+      if (invitation.id != null) {
+        final updated = await _repository.updatePartnerInvitation(
+          id: invitation.id!,
+          status: nextPaused ? 'paused' : 'accepted',
+          sharingPaused: nextPaused,
+        );
+        final idx = _partnerInvitations.indexWhere((i) => i.id == updated.id);
+        if (idx >= 0) _partnerInvitations[idx] = updated;
+      }
+      await _repository.updateFamilyConnectionStatus(
+        familyId: _familyProfile.id,
+        connectionStatus: nextPaused ? 'paused' : 'connected',
+      );
+      await _reloadBlocksAndSessions(alignPrayerTimes: false);
+    } catch (e) {
+      debugPrint('Ortak paylaşım duraklatma hatası: $e');
+    }
+  }
+
+  Future<void> removeOrUnlinkPartnerConnection(
+    PartnerInvitation invitation,
+  ) async {
+    try {
+      final wasAccepted =
+          invitation.status == 'accepted' || invitation.status == 'paused';
+      if (invitation.id != null) {
+        await _repository.removePartnerInvitation(invitation.id!);
+        _partnerInvitations.removeWhere((i) => i.id == invitation.id);
+      }
+      if (wasAccepted &&
+          !_partnerInvitations.any((i) => i.status == 'accepted')) {
+        await _repository.updateFamilyConnectionStatus(
+          familyId: _familyProfile.id,
+          connectionStatus: 'removed',
+        );
+      }
+      await _reloadBlocksAndSessions(alignPrayerTimes: false);
+      await _notificationService.sendDeviceNotification(
+        id: 7009,
+        title: 'Ortak Bağlantı Kaldırıldı (${invitation.formattedTargetHandle})',
+        body:
+            '${invitation.inviteeLabel} (${invitation.formattedTargetHandle}) ile ortak plan bağlantısı sonlandırıldı.',
+      );
+    } catch (e) {
+      debugPrint('Ortak bağlantı kaldırma hatası: $e');
+    }
+  }
+
+  Future<void> reconnectDefaultPartner() async {
+    final targetHandle = _memberRoleKey == 'wife' ? 'ilker' : 'neslihan';
+    final targetName = _memberRoleKey == 'wife' ? 'İlker' : 'Neslihan';
+    await _repository.updateFamilyConnectionStatus(
+      familyId: _familyProfile.id,
+      connectionStatus: 'connected',
+    );
+    final created = await _repository.addPartnerInvitation(
+      PartnerInvitation(
+        familyId: _familyProfile.id,
+        inviterName: _activeDisplayName,
+        inviterUsername: _activeUsername,
+        inviteeLabel: targetName,
+        targetUsername: targetHandle,
+        relationType: 'spouse',
+        inviteCode: _familyProfile.inviteCode,
+        status: 'accepted',
+        sharingPaused: false,
+      ),
+    );
+    _partnerInvitations.insert(0, created);
+    await _reloadBlocksAndSessions(alignPrayerTimes: false);
   }
 
   void setTimelineFilter(String filter) {
@@ -805,6 +961,25 @@ class PlannerViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> updateWaterDailyGoal(int newGoalMl) async {
+    try {
+      final current = activeWaterTracker;
+      final updated = await _repository.updateWaterIntake(
+        tracker: current,
+        newIntakeMl: current.currentIntakeMl,
+        newGoalMl: newGoalMl.clamp(500, 10000),
+      );
+      if (_waterTrackers.isEmpty) {
+        _waterTrackers = [updated];
+      } else {
+        _waterTrackers[0] = updated;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Su hedefi güncelleme hatası: $e');
+    }
+  }
+
   Future<void> triggerWaterDeviceNotificationNow() async {
     final tracker = activeWaterTracker;
     final remaining = (tracker.dailyGoalMl - tracker.currentIntakeMl).clamp(
@@ -851,6 +1026,15 @@ class PlannerViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> resetBlockToPlanned(ScheduleBlock block) async {
+    final updated = block.copyWith(
+      status: 'planned',
+      completionNotes: '',
+      skipReason: '',
+    );
+    await saveOrCreateBlock(updated);
+  }
+
   Future<void> addFocusSession(FocusSession session) async {
     final created = await _repository.addFocusSession(session);
     _focusSessions.add(created);
@@ -863,6 +1047,16 @@ class PlannerViewModel extends ChangeNotifier {
     if (idx >= 0) {
       _focusSessions[idx] = updated;
       notifyListeners();
+    }
+  }
+
+  Future<void> deleteFocusSession(int id) async {
+    try {
+      await _repository.removeFocusSession(id);
+      _focusSessions.removeWhere((s) => s.id == id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Odak kuralı silme hatası: $e');
     }
   }
 

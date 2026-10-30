@@ -496,29 +496,96 @@ class WaterTracker {
   }
 }
 
+class MemberAccountProfile {
+  final int? id;
+  final int familyId;
+  final String userId;
+  final String username;
+  final String displayName;
+  final String roleLabel;
+  final String connectionStatus; // 'connected' | 'paused' | 'removed'
+
+  const MemberAccountProfile({
+    this.id,
+    required this.familyId,
+    required this.userId,
+    required this.username,
+    required this.displayName,
+    required this.roleLabel,
+    this.connectionStatus = 'connected',
+  });
+
+  String get formattedHandle =>
+      username.startsWith('@') ? username : '@$username';
+
+  bool get isConnected => connectionStatus == 'connected';
+  bool get isPaused => connectionStatus == 'paused';
+  bool get isRemoved => connectionStatus == 'removed';
+
+  factory MemberAccountProfile.fromJson(Map<String, dynamic> json) {
+    final rawName = (json['display_name'] ?? 'Üye').toString();
+    final rawUsername = (json['username'] ??
+            rawName.toLowerCase().replaceAll(' ', '_'))
+        .toString()
+        .replaceAll('@', '');
+    return MemberAccountProfile(
+      id: (json['id'] as num?)?.toInt(),
+      familyId: (json['family_id'] as num?)?.toInt() ?? 1,
+      userId: (json['user_id'] ?? '').toString(),
+      username: rawUsername,
+      displayName: rawName,
+      roleLabel: (json['role_label'] ?? 'husband').toString(),
+      connectionStatus: (json['connection_status'] ?? 'connected').toString(),
+    );
+  }
+}
+
 class PartnerInvitation {
   final int? id;
   final int familyId;
   final String inviterName;
+  final String inviterUsername;
   final String inviteeLabel;
+  final String targetUsername;
   final String relationType; // 'spouse' | 'friend' | 'family'
   final String inviteCode;
-  final String status; // 'pending' | 'accepted'
+  final String status; // 'pending' | 'accepted' | 'paused'
+  final bool sharingPaused;
 
-  const PartnerInvitation({
+  PartnerInvitation({
     this.id,
     required this.familyId,
     String? inviterName,
     String? inviterRole,
+    String? inviterUsername,
     required this.inviteeLabel,
+    String? targetUsername,
     String? inviteeEmail,
     String? relationType,
     String? relationshipType,
     required this.inviteCode,
     required this.status,
+    this.sharingPaused = false,
     bool? allowSharedPlans,
-  }) : inviterName = inviterName ?? (inviterRole == 'wife' ? 'Eşim' : 'İlker'),
+  }) : inviterName = inviterName ?? (inviterRole == 'wife' ? 'Neslihan' : 'İlker'),
+       inviterUsername = (inviterUsername ?? 'ilker').replaceAll('@', ''),
+       targetUsername = (targetUsername ?? inviteeEmail ?? 'neslihan')
+           .replaceAll('@', '')
+           .split('@')
+           .first,
        relationType = relationType ?? relationshipType ?? 'spouse';
+
+  String get formattedInviterHandle => '@$inviterUsername';
+  String get formattedTargetHandle => '@$targetUsername';
+
+  String partnerDisplayFor(String currentUsername) {
+    final cleanMe = currentUsername.replaceAll('@', '').toLowerCase();
+    if (targetUsername.toLowerCase() == cleanMe &&
+        inviterUsername.toLowerCase() != cleanMe) {
+      return '$inviterName ($formattedInviterHandle)';
+    }
+    return '$inviteeLabel ($formattedTargetHandle)';
+  }
 
   String get relationshipType => relationLabel;
 
@@ -526,7 +593,7 @@ class PartnerInvitation {
     switch (relationType) {
       case 'friend':
       case 'Arkadaş / Çalışma Partneri':
-        return 'Arkadaş / Partner';
+        return 'Arkadaş / Çalışma Partneri';
       case 'family':
       case 'Aile Üyesi':
         return 'Aile Üyesi';
@@ -535,15 +602,44 @@ class PartnerInvitation {
     }
   }
 
+  PartnerInvitation copyWith({
+    int? id,
+    int? familyId,
+    String? inviterName,
+    String? inviterUsername,
+    String? inviteeLabel,
+    String? targetUsername,
+    String? relationType,
+    String? inviteCode,
+    String? status,
+    bool? sharingPaused,
+  }) {
+    return PartnerInvitation(
+      id: id ?? this.id,
+      familyId: familyId ?? this.familyId,
+      inviterName: inviterName ?? this.inviterName,
+      inviterUsername: inviterUsername ?? this.inviterUsername,
+      inviteeLabel: inviteeLabel ?? this.inviteeLabel,
+      targetUsername: targetUsername ?? this.targetUsername,
+      relationType: relationType ?? this.relationType,
+      inviteCode: inviteCode ?? this.inviteCode,
+      status: status ?? this.status,
+      sharingPaused: sharingPaused ?? this.sharingPaused,
+    );
+  }
+
   factory PartnerInvitation.fromJson(Map<String, dynamic> json) {
     return PartnerInvitation(
       id: (json['id'] as num?)?.toInt(),
       familyId: (json['family_id'] as num?)?.toInt() ?? 1,
       inviterName: (json['inviter_name'] ?? 'İlker').toString(),
-      inviteeLabel: (json['invitee_label'] ?? 'Eşim').toString(),
+      inviterUsername: (json['inviter_username'] ?? 'ilker').toString(),
+      inviteeLabel: (json['invitee_label'] ?? 'Neslihan').toString(),
+      targetUsername: (json['target_username'] ?? 'neslihan').toString(),
       relationType: (json['relation_type'] ?? 'spouse').toString(),
       inviteCode: (json['invite_code'] ?? 'AYDOGDU26').toString(),
       status: (json['status'] ?? 'accepted').toString(),
+      sharingPaused: json['sharing_paused'] == true,
     );
   }
 
@@ -556,10 +652,13 @@ class PartnerInvitation {
     return {
       'family_id': familyId,
       'inviter_name': inviterName,
+      'inviter_username': inviterUsername.replaceAll('@', ''),
       'invitee_label': inviteeLabel,
+      'target_username': targetUsername.replaceAll('@', ''),
       'relation_type': dbRelation,
       'invite_code': inviteCode,
       'status': status,
+      'sharing_paused': sharingPaused,
     };
   }
 }

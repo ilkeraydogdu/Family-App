@@ -47,6 +47,20 @@ class PlannerRepository {
     return _supabaseService.fetchConnectedMemberNames(familyId);
   }
 
+  Future<List<MemberAccountProfile>> loadFamilyMemberProfiles(int familyId) {
+    return _supabaseService.fetchFamilyMemberProfiles(familyId);
+  }
+
+  Future<void> updateFamilyConnectionStatus({
+    required int familyId,
+    required String connectionStatus,
+  }) {
+    return _supabaseService.updateFamilyConnectionStatus(
+      familyId: familyId,
+      connectionStatus: connectionStatus,
+    );
+  }
+
   Future<FamilyProfile> loadFamilyProfile() {
     return _supabaseService.fetchPrimaryFamily();
   }
@@ -155,6 +169,10 @@ class PlannerRepository {
     return _supabaseService.toggleFocusSession(session);
   }
 
+  Future<void> removeFocusSession(int id) {
+    return _supabaseService.deleteFocusSession(id);
+  }
+
   // Medication Reminders
   Future<List<MedicationReminder>> loadMedicationReminders(int familyId) {
     return _supabaseService.fetchMedicationReminders(familyId);
@@ -185,20 +203,38 @@ class PlannerRepository {
   Future<WaterTracker> updateWaterIntake({
     required WaterTracker tracker,
     required int newIntakeMl,
+    int? newGoalMl,
   }) {
     return _supabaseService.updateWaterIntake(
       tracker: tracker,
       newIntakeMl: newIntakeMl,
+      newGoalMl: newGoalMl,
     );
   }
 
-  // Partner Invitations
+  // Partner Invitations (@username Ecosystem)
   Future<List<PartnerInvitation>> loadPartnerInvitations(int familyId) {
     return _supabaseService.fetchPartnerInvitations(familyId);
   }
 
   Future<PartnerInvitation> addPartnerInvitation(PartnerInvitation invitation) {
     return _supabaseService.createPartnerInvitation(invitation);
+  }
+
+  Future<PartnerInvitation> updatePartnerInvitation({
+    required int id,
+    required String status,
+    required bool sharingPaused,
+  }) {
+    return _supabaseService.updatePartnerInvitation(
+      id: id,
+      status: status,
+      sharingPaused: sharingPaused,
+    );
+  }
+
+  Future<void> removePartnerInvitation(int id) {
+    return _supabaseService.deletePartnerInvitation(id);
   }
 
   RealtimeChannel subscribeToRealtime({

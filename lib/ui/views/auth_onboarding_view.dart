@@ -20,7 +20,7 @@ class _AuthOnboardingViewState extends State<AuthOnboardingView> {
 
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController(
-    text: SupabaseConfig.defaultHusbandEmail,
+    text: '@${SupabaseConfig.defaultHusbandUsername}',
   );
   final _passwordCtrl = TextEditingController(
     text: SupabaseConfig.defaultCouplePassword,
@@ -110,7 +110,7 @@ class _AuthOnboardingViewState extends State<AuthOnboardingView> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Kişisel planlarınız size özeldir; yalnızca ortak seçtikleriniz eşinizle paylaşılır.',
+                              'E-posta veya telefon paylaşmadan @kullanici_adi ile güvenli üyelik ve ortak plan ekosistemi.',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: Color(0xFF64748B),
@@ -179,8 +179,9 @@ class _AuthOnboardingViewState extends State<AuthOnboardingView> {
                   ],
                   TextField(
                     controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _inputDeco('E-posta Adresi'),
+                    decoration: _inputDeco(
+                      'Kullanıcı Adı (Örn: @ilker veya @neslihan)',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -239,14 +240,14 @@ class _AuthOnboardingViewState extends State<AuthOnboardingView> {
                             onPressed: () {
                               setState(() {
                                 _emailCtrl.text =
-                                    SupabaseConfig.defaultHusbandEmail;
+                                    '@${SupabaseConfig.defaultHusbandUsername}';
                                 _passwordCtrl.text =
                                     SupabaseConfig.defaultCouplePassword;
                               });
                               _submit();
                             },
                             child: const Text(
-                              'İlker Hesabı',
+                              '@ilker Hesabı',
                               style: TextStyle(fontSize: 12),
                             ),
                           ),
@@ -257,14 +258,14 @@ class _AuthOnboardingViewState extends State<AuthOnboardingView> {
                             onPressed: () {
                               setState(() {
                                 _emailCtrl.text =
-                                    SupabaseConfig.defaultWifeEmail;
+                                    '@${SupabaseConfig.defaultWifeUsername}';
                                 _passwordCtrl.text =
                                     SupabaseConfig.defaultCouplePassword;
                               });
                               _submit();
                             },
                             child: const Text(
-                              'Neslihan Hesabı',
+                              '@neslihan Hesabı',
                               style: TextStyle(fontSize: 12),
                             ),
                           ),

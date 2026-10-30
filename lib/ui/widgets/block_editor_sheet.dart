@@ -8,6 +8,7 @@ class BlockEditorSheet extends StatefulWidget {
   final String personalRoleKey;
   final ScheduleBlock? existingBlock;
   final ValueChanged<ScheduleBlock> onSave;
+  final VoidCallback? onDelete;
 
   const BlockEditorSheet({
     super.key,
@@ -16,6 +17,7 @@ class BlockEditorSheet extends StatefulWidget {
     this.personalRoleKey = 'husband',
     this.existingBlock,
     required this.onSave,
+    this.onDelete,
   });
 
   @override
@@ -543,6 +545,28 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                 ),
               ),
             ),
+            if (widget.existingBlock != null && widget.onDelete != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onDelete!();
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFB91C1C),
+                    side: const BorderSide(color: Color(0xFFFECACA)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text(
+                    'Bu Saatlik Planı Sil',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -96,7 +96,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${widget.viewModel.activeDisplayName} • Hesap & Ortak Bağlantılar',
+                        '${widget.viewModel.activeDisplayName} (${widget.viewModel.activeUsernameHandle})',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 15.5,
@@ -106,7 +106,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                       ),
                       const SizedBox(height: 2),
                       const Text(
-                        'Kişisel planlarınız gizlidir; yalnızca ortak işler beraber görülür',
+                        'E-posta gizlidir • @kullanici_adi ile güvenli ortak plan ekosistemi',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),
@@ -114,6 +114,11 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  key: const ValueKey('close_auth_invite_sheet_btn'),
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close, color: Color(0xFF64748B)),
                 ),
               ],
             ),
@@ -274,10 +279,11 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                       ),
                     ),
                     Text(
-                      vm.activeUserEmail,
+                      'Kullanıcı Adı: ${vm.activeUsernameHandle} • Kişisel Veri Gizli',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF64748B),
+                        color: Color(0xFF0F766E),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -335,8 +341,9 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         ],
         TextField(
           controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          decoration: _inputDecoration('E-posta Adresi'),
+          decoration: _inputDecoration(
+            'Kullanıcı Adı (Örn: @ilker veya @neslihan)',
+          ),
         ),
         const SizedBox(height: 10),
         TextField(
@@ -484,13 +491,17 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         ),
         const SizedBox(height: 10),
         TextField(
+          key: const ValueKey('invite_username_field'),
           controller: _inviteeEmailController,
-          decoration: _inputDecoration('Davet E-postası (İsteğe Bağlı)'),
+          decoration: _inputDecoration(
+            'Davet Edilecek @kullanici_adi (Örn: @neslihan, @ahmet_yilmaz)',
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           child: FilledButton(
+            key: const ValueKey('send_partner_invite_btn'),
             onPressed: _sendPartnerInvite,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF0F766E),
@@ -500,64 +511,190 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
               ),
             ),
             child: const Text(
-              'Davet Oluştur & Bildirim Gönder',
+              '@kullanici_adi İle Ortak Bağlantı Gönder',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ),
         if (invitations.isNotEmpty) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           const Text(
-            'Ortak Plan Bağlantıları',
+            'Aktif & Bekleyen Ortak Bağlantılar (Duraklat / Kaldır)',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: Color(0xFF475569),
             ),
           ),
-          const SizedBox(height: 6),
-          ...invitations.take(3).map(
-                (inv) => Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    children: [
-                      const AppSvgIcon(
-                        svgData: AppSvgs.usersCouple,
-                        size: 16,
-                        color: Color(0xFF334155),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          '${inv.inviteeLabel} • ${inv.relationshipType}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        inv.inviteCode,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F766E),
-                        ),
-                      ),
-                    ],
+          const SizedBox(height: 8),
+          ...invitations.map(
+            (inv) {
+              final isAccepted = inv.status == 'accepted' && !inv.sharingPaused;
+              final isPaused = inv.sharingPaused || inv.status == 'paused';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isAccepted
+                        ? const Color(0xFFBBF7D0)
+                        : isPaused
+                        ? const Color(0xFFFDE68A)
+                        : const Color(0xFFE2E8F0),
                   ),
                 ),
-              ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const AppSvgIcon(
+                          svgData: AppSvgs.usersCouple,
+                          size: 16,
+                          color: Color(0xFF0F172A),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            inv.partnerDisplayFor(vm.activeUsername),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isAccepted
+                                ? const Color(0xFFDCFCE7)
+                                : isPaused
+                                ? const Color(0xFFFEF3C7)
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isAccepted
+                                ? 'Aktif Bağlantı'
+                                : isPaused
+                                ? 'Paylaşım Duraklatıldı'
+                                : 'İstek Bekliyor',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: isAccepted
+                                  ? const Color(0xFF166534)
+                                  : isPaused
+                                  ? const Color(0xFF92400E)
+                                  : const Color(0xFF475569),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${inv.relationshipType} • Kod: ${inv.inviteCode}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        if (inv.status == 'pending')
+                          OutlinedButton(
+                            onPressed: () async {
+                              await widget.viewModel
+                                  .acceptOrReconnectPartnerInvitation(inv);
+                              if (!mounted) return;
+                              setState(() {
+                                _statusBanner =
+                                    '${inv.formattedTargetHandle} bağlantısı onaylandı ve ortak planlar senkronize edildi.';
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF0F766E),
+                              side: const BorderSide(color: Color(0xFF99F6E4)),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            child: const Text(
+                              'Bağlantıyı Onayla',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          )
+                        else
+                          OutlinedButton(
+                            onPressed: () async {
+                              await widget.viewModel
+                                  .togglePausePartnerSharing(inv);
+                              if (!mounted) return;
+                              setState(() {
+                                _statusBanner = isPaused
+                                    ? '${inv.formattedTargetHandle} ile ortak plan paylaşımı yeniden açıldı.'
+                                    : '${inv.formattedTargetHandle} ile ortak plan paylaşımı geçici olarak duraklatıldı.';
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFB45309),
+                              side: const BorderSide(color: Color(0xFFFDE68A)),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            child: Text(
+                              isPaused
+                                  ? 'Paylaşımı Sürdür'
+                                  : 'Paylaşımı Duraklat',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        OutlinedButton(
+                          onPressed: () async {
+                            await widget.viewModel
+                                .removeOrUnlinkPartnerConnection(inv);
+                            if (!mounted) return;
+                            setState(() {
+                              _statusBanner =
+                                  '${inv.inviteeLabel} (${inv.formattedTargetHandle}) ortak bağlantısı kaldırıldı.';
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFB91C1C),
+                            side: const BorderSide(color: Color(0xFFFECACA)),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          child: Text(
+                            inv.status == 'pending'
+                                ? 'Daveti İptal Et / Sil'
+                                : 'Bağlantıyı Kaldır / Sil',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ],
       ],
     );

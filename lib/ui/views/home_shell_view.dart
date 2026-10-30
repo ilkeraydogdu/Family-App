@@ -81,7 +81,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${vm.activeDisplayName} • Kişisel & Ortak Ajanda',
+                        '${vm.activeDisplayName} (${vm.activeUsernameHandle}) • Ajanda',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 15,
@@ -103,7 +103,7 @@ class _HomeShellViewState extends State<HomeShellView> {
               ],
             ),
             actions: [
-              // Member Account & Partner Invite Button (No role switcher!)
+              // Member Account & Partner Invite Button (@username ecosystem, zero email!)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: InkWell(
@@ -129,7 +129,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          vm.activeDisplayName,
+                          vm.activeUsernameHandle,
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -379,6 +379,8 @@ class _HomeShellViewState extends State<HomeShellView> {
           const SizedBox(height: 12),
           _buildQuickHealthSummaryStrip(vm),
           const SizedBox(height: 12),
+          _buildSevenDayCalendarStrip(vm),
+          const SizedBox(height: 12),
           _buildFilterRow(vm),
           const SizedBox(height: 12),
           if (blocks.isEmpty)
@@ -401,8 +403,162 @@ class _HomeShellViewState extends State<HomeShellView> {
     );
   }
 
+  Widget _buildSevenDayCalendarStrip(PlannerViewModel vm) {
+    final now = DateTime.now();
+    final todayDate = DateTime(now.year, now.month, now.day);
+    final selectedDay = DateTime(
+      vm.selectedDate.year,
+      vm.selectedDate.month,
+      vm.selectedDate.day,
+    );
+    const dayLabels = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: _minimalCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const AppSvgIcon(
+                svgData: AppSvgs.calendar,
+                color: Color(0xFF0F172A),
+                size: 14,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Haftalık Gün Seçimi (${vm.formattedSelectedDate})',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+              if (selectedDay != todayDate)
+                InkWell(
+                  onTap: () => vm.selectDate(todayDate),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Text(
+                      'Bugüne Dön',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F766E),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (idx) {
+              final d = todayDate.add(Duration(days: idx - 1));
+              final isSelected =
+                  d.year == selectedDay.year &&
+                  d.month == selectedDay.month &&
+                  d.day == selectedDay.day;
+              final isToday =
+                  d.year == todayDate.year &&
+                  d.month == todayDate.month &&
+                  d.day == todayDate.day;
+              final label = dayLabels[d.weekday - 1];
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => vm.selectDate(d),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF0F172A)
+                          : isToday
+                          ? const Color(0xFFF0FDF4)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFF0F172A)
+                            : isToday
+                            ? const Color(0xFF86EFAC)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          isToday ? 'Bugün' : label,
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected
+                                ? const Color(0xFF38BDF8)
+                                : isToday
+                                ? const Color(0xFF0F766E)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${d.day}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _computeNextPrayerSummary(PrayerTimesDay p) {
+    final now = DateTime.now();
+    final nowMins = now.hour * 60 + now.minute;
+    final items = [
+      ('Sabah', p.fajr),
+      ('Güneş', p.sunrise),
+      ('Öğle', p.dhuhr),
+      ('İkindi', p.asr),
+      ('Akşam', p.maghrib),
+      ('Yatsı', p.isha),
+    ];
+    for (final entry in items) {
+      final parts = entry.$2.split(':');
+      if (parts.length >= 2) {
+        final mins =
+            (int.tryParse(parts[0]) ?? 0) * 60 + (int.tryParse(parts[1]) ?? 0);
+        if (mins > nowMins) {
+          final diff = mins - nowMins;
+          final hrs = diff ~/ 60;
+          final remMins = diff % 60;
+          final leftStr = hrs > 0 ? '${hrs}s ${remMins}dk' : '${remMins}dk';
+          return 'Sıradaki: ${entry.$1} ${entry.$2} ($leftStr kaldı)';
+        }
+      }
+    }
+    return 'Sıradaki: Sabah ${p.fajr} (Yarın sabah uyanış)';
+  }
+
   Widget _buildLivePrayerTimesBanner(PlannerViewModel vm) {
     final p = vm.prayerTimes;
+    final nextPrayerLabel = _computeNextPrayerSummary(p);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -441,10 +597,14 @@ class _HomeShellViewState extends State<HomeShellView> {
                         color: Color(0xFF0F172A),
                       ),
                     ),
-                    const Text(
-                      'Namaza bağlı sabah uyanış ve servis saatleri otomatik güncellenir',
+                    Text(
+                      nextPrayerLabel,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F766E),
+                      ),
                     ),
                   ],
                 ),
@@ -1066,19 +1226,21 @@ class _HomeShellViewState extends State<HomeShellView> {
   }
 
   // ===========================================================================
-  // TAB 2: ORTAK İŞLERİMİZ & PARTNER BAĞLANTISI (DİĞER ÜYENİN ÖZEL İŞLERİ GİZLİ)
+  // TAB 2: ORTAK İŞLERİMİZ & PARTNER BAĞLANTISI (@KULLANICI_ADI EKOSİSTEMİ, SIFIR MAİL)
   // ===========================================================================
   Widget _buildSharedPlansAndPartnersTab(
     BuildContext context,
     PlannerViewModel vm,
   ) {
     final sharedList = vm.sharedBlocksOnly;
-    final partnersText = vm.linkedPartnerNames.join(', ');
+    final partnersText = vm.linkedPartnerNames.isEmpty
+        ? 'Aktif Ortak Yok'
+        : vm.linkedPartnerNames.join(', ');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
       children: [
-        // Membership, Privacy & Partner Connection Card
+        // Membership, Privacy & Partner Connection Card (@username only, zero email!)
         Container(
           padding: const EdgeInsets.all(16),
           decoration: _minimalCardDecoration(),
@@ -1105,7 +1267,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Ortak Plan Bağlantısı: $partnersText',
+                          'Ortak Plan Bağlantısı: $partnersText (${vm.primaryPartnerHandle})',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
@@ -1115,7 +1277,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Aktif Üye: ${vm.activeDisplayName} (${vm.activeUserEmail}) • Kod: ${vm.familyProfile.inviteCode}',
+                          'Aktif Üye: ${vm.activeDisplayName} (${vm.activeUsernameHandle}) • Ekosistem Kodu: ${vm.familyProfile.inviteCode}',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 11.5,
@@ -1145,7 +1307,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Gizlilik Koruması Aktif: Sizin ${vm.personalBlocksOnly.length} kişisel planınız yalnızca bu telefonda görünür. $partnersText ile sadece aşağıdaki ${sharedList.length} ortak plan paylaşılır.',
+                        'Sıfır Şahsi Veri & Gizlilik Koruması: E-posta veya telefon numarası asla görünmez. Sizin ${vm.personalBlocksOnly.length} kişisel planınız yalnızca bu cihazda görünür; ${vm.primaryPartnerHandle} ile sadece aşağıdaki ${sharedList.length} ortak plan paylaşılır.',
                         style: const TextStyle(
                           fontSize: 11.5,
                           color: Color(0xFF334155),
@@ -1157,6 +1319,183 @@ class _HomeShellViewState extends State<HomeShellView> {
                 ),
               ),
               const SizedBox(height: 12),
+              // Direct Partner Connections Lifecycle Management (Pause / Unlink / Approve / Delete)
+              const Text(
+                'Ortak Bağlantı & Partner Yönetimi (@kullanici_adi)',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (vm.partnerInvitations.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Aktif ortak bağlantı bulunmuyor. Kişisel planlarınız yalnız size özeldir.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonal(
+                        onPressed: vm.reconnectDefaultPartner,
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          backgroundColor: const Color(0xFFDCFCE7),
+                          foregroundColor: const Color(0xFF15803D),
+                        ),
+                        child: Text(
+                          '${vm.primaryPartnerHandle} Bağla',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...vm.partnerInvitations.map((inv) {
+                  final isAccepted = inv.status == 'accepted';
+                  final isPaused = inv.status == 'paused' || inv.sharingPaused;
+                  final statusText = isPaused
+                      ? 'Paylaşım Duraklatıldı'
+                      : isAccepted
+                      ? 'Bağlı & Aktif'
+                      : 'Onay Bekliyor';
+                  final statusColor = isPaused
+                      ? const Color(0xFFB45309)
+                      : isAccepted
+                      ? const Color(0xFF15803D)
+                      : const Color(0xFF0284C7);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(11),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${inv.partnerDisplayFor(vm.activeUsername)} • ${inv.relationshipType}',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.5,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                statusText,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            if (inv.status == 'pending')
+                              FilledButton.tonal(
+                                onPressed: () => vm
+                                    .acceptOrReconnectPartnerInvitation(inv),
+                                style: FilledButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  backgroundColor: const Color(0xFFDCFCE7),
+                                  foregroundColor: const Color(0xFF15803D),
+                                ),
+                                child: const Text(
+                                  'Bağlantıyı Onayla',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            if (isAccepted || isPaused)
+                              OutlinedButton(
+                                onPressed: () =>
+                                    vm.togglePausePartnerSharing(inv),
+                                style: OutlinedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  foregroundColor: const Color(0xFF0F172A),
+                                  side: const BorderSide(
+                                    color: Color(0xFFCBD5E1),
+                                  ),
+                                ),
+                                child: Text(
+                                  isPaused
+                                      ? 'Paylaşımı Sürdür'
+                                      : 'Paylaşımı Duraklat',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            OutlinedButton(
+                              onPressed: () =>
+                                  vm.removeOrUnlinkPartnerConnection(inv),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                foregroundColor: const Color(0xFFB91C1C),
+                                side: const BorderSide(
+                                  color: Color(0xFFFECACA),
+                                ),
+                              ),
+                              child: Text(
+                                isAccepted || isPaused
+                                    ? 'Bağlantıyı Kaldır / Sil'
+                                    : 'Daveti İptal Et / Sil',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -1169,7 +1508,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ),
                   ),
                   child: const Text(
-                    'Eş / Arkadaş Davet Et & Hesap Ayarları',
+                    '@KullanıcıAdı İle Eş / Arkadaş Davet Et & Hesap Yönetimi',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1200,7 +1539,7 @@ class _HomeShellViewState extends State<HomeShellView> {
             padding: const EdgeInsets.all(20),
             decoration: _minimalCardDecoration(),
             child: const Text(
-              'Henüz ortak işaretlenmiş bir plan bulunmuyor.',
+              'Henüz ortak işaretlenmiş bir plan bulunmuyor veya ortak paylaşım duraklatıldı.',
               style: TextStyle(color: Color(0xFF64748B)),
             ),
           )
@@ -1307,7 +1646,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Kişisel Su Hatırlatıcım (${vm.activeDisplayName})',
+                          'Kişisel Su Hatırlatıcım (${vm.activeUsernameHandle})',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -1324,12 +1663,35 @@ class _HomeShellViewState extends State<HomeShellView> {
                       ],
                     ),
                   ),
-                  Text(
-                    '${water.currentIntakeMl} / ${water.dailyGoalMl} ml',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0284C7),
+                  InkWell(
+                    onTap: () => _openWaterGoalDialog(context, vm),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${water.currentIntakeMl} / ${water.dailyGoalMl} ml',
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
+                          const Text(
+                            'Hedefi Düzenle',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -1358,7 +1720,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                       ),
                       child: const Text(
-                        '+250 ml (Bardak)',
+                        '+250 ml',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -1366,7 +1728,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => vm.addWaterIntake(500),
@@ -1379,7 +1741,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                       ),
                       child: const Text(
-                        '+500 ml (Şişe)',
+                        '+500 ml',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -1387,7 +1749,31 @@ class _HomeShellViewState extends State<HomeShellView> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+                  OutlinedButton(
+                    onPressed: water.currentIntakeMl > 0
+                        ? () => vm.addWaterIntake(-250)
+                        : null,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF64748B),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 11,
+                        horizontal: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      '-250 ml',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
                   OutlinedButton(
                     onPressed: vm.triggerWaterDeviceNotificationNow,
                     style: OutlinedButton.styleFrom(
@@ -1404,7 +1790,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     child: const Text(
                       'Hatırlat',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1552,6 +1938,18 @@ class _HomeShellViewState extends State<HomeShellView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (med.id != null)
+                TextButton(
+                  onPressed: () => vm.deleteMedicationReminder(med.id!),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: const Color(0xFFB91C1C),
+                  ),
+                  child: const Text(
+                    'İlacı Sil',
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                  ),
+                ),
               TextButton.icon(
                 onPressed: () => vm.sendMedicationDeviceNotification(med),
                 style: TextButton.styleFrom(
@@ -1666,13 +2064,36 @@ class _HomeShellViewState extends State<HomeShellView> {
           ),
         ),
         const SizedBox(height: 18),
-        const Text(
-          'Planlı Kısıtlama Saatleri',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF0F172A),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text(
+                'Planlı Kısıtlama Saatleri',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _openAddFocusRuleDialog(context, vm),
+              icon: const AppSvgIcon(
+                svgData: AppSvgs.plus,
+                color: Color(0xFF0F766E),
+                size: 14,
+              ),
+              label: const Text(
+                'Yeni Kural Ekle',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F766E),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         ...vm.focusSessions.map(
@@ -1705,6 +2126,21 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ],
                   ),
                 ),
+                if (session.id != null)
+                  TextButton(
+                    onPressed: () => vm.deleteFocusSession(session.id!),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: const Color(0xFFB91C1C),
+                    ),
+                    child: const Text(
+                      'Sil',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 Switch(
                   value: session.isActive,
                   onChanged: (_) => vm.toggleFocusSession(session),
@@ -1820,6 +2256,20 @@ class _HomeShellViewState extends State<HomeShellView> {
                       ],
                     ),
                   ),
+                  TextButton(
+                    onPressed: () => vm.resetBlockToPlanned(b),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: const Color(0xFF475569),
+                    ),
+                    child: const Text(
+                      'Sıfırla',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1881,10 +2331,29 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ),
                   ),
                   TextButton(
+                    onPressed: () => vm.resetBlockToPlanned(b),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Tekrar Planla',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  TextButton(
                     onPressed: () => vm.checkInToBlock(b),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
                     child: const Text(
                       'Telafi Et',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -1959,6 +2428,105 @@ class _HomeShellViewState extends State<HomeShellView> {
         personalRoleKey: vm.memberRoleKey,
         existingBlock: existing,
         onSave: vm.saveOrCreateBlock,
+        onDelete: existing?.id != null
+            ? () => vm.deleteBlock(existing!.id!)
+            : null,
+      ),
+    );
+  }
+
+  void _openWaterGoalDialog(BuildContext context, PlannerViewModel vm) {
+    final goalCtrl = TextEditingController(
+      text: '${vm.activeWaterTracker.dailyGoalMl}',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Günlük Su Hedefi (ml)'),
+        content: TextField(
+          controller: goalCtrl,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Hedef Miktar (Örn: 2500 veya 3000 ml)',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = int.tryParse(goalCtrl.text.trim()) ?? 2500;
+              vm.updateWaterDailyGoal(parsed);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openAddFocusRuleDialog(BuildContext context, PlannerViewModel vm) {
+    final titleCtrl = TextEditingController();
+    final startCtrl = TextEditingController(text: '21:00');
+    final endCtrl = TextEditingController(text: '22:30');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Yeni Telefon Kısıtlama Kuralı'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Kural Adı (Örn: Akşam Kitap & Aile Vakti)',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: startCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Başlangıç Saati (SS:DD)',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: endCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Bitiş Saati (SS:DD)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('İptal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (titleCtrl.text.trim().isEmpty) return;
+              vm.addFocusSession(
+                FocusSession(
+                  familyId: vm.familyProfile.id,
+                  targetRole: vm.memberRoleKey,
+                  title: titleCtrl.text.trim(),
+                  startTime: startCtrl.text.trim(),
+                  endTime: endCtrl.text.trim(),
+                  allowCallsOnly: true,
+                  isActive: true,
+                  emergencyContactPhone: '+90 555 000 00 00',
+                ),
+              );
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Ekle'),
+          ),
+        ],
       ),
     );
   }

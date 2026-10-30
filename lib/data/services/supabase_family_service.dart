@@ -66,11 +66,16 @@ class SupabaseFamilyService {
     }
 
     if (userId != null) {
+      final cleanHandle = SupabaseConfig.normalizeUsernameHandle(
+        email.contains('@') ? email.split('@').first : displayName,
+      );
       await _client.from('family_members').upsert({
         'family_id': targetFamilyId,
         'user_id': userId,
         'role_label': roleLabel,
         'display_name': displayName.trim(),
+        'username': cleanHandle,
+        'connection_status': 'connected',
         'avatar_color': '#0F766E',
       }, onConflict: 'family_id,user_id');
     }
@@ -78,12 +83,58 @@ class SupabaseFamilyService {
     return cleanEmail;
   }
 
+  Future<List<MemberAccountProfile>> fetchFamilyMemberProfiles(
+    int familyId,
+  ) async {
+    try {
+      final rows = await _client
+          .from('family_members')
+          .select()
+          .eq('family_id', familyId)
+          .order('id', ascending: true);
+      return (rows as List<dynamic>)
+          .whereType<Map<String, dynamic>>()
+          .map(MemberAccountProfile.fromJson)
+          .toList();
+    } catch (_) {
+      return const [
+        MemberAccountProfile(
+          familyId: 1,
+          userId: '11111111-1111-1111-1111-111111111111',
+          username: 'ilker',
+          displayName: 'İlker',
+          roleLabel: 'husband',
+          connectionStatus: 'connected',
+        ),
+        MemberAccountProfile(
+          familyId: 1,
+          userId: '22222222-2222-2222-2222-222222222222',
+          username: 'neslihan',
+          displayName: 'Neslihan',
+          roleLabel: 'wife',
+          connectionStatus: 'connected',
+        ),
+      ];
+    }
+  }
+
+  Future<void> updateFamilyConnectionStatus({
+    required int familyId,
+    required String connectionStatus,
+  }) async {
+    await _client
+        .from('family_members')
+        .update({'connection_status': connectionStatus})
+        .eq('family_id', familyId);
+  }
+
   Future<List<String>> fetchConnectedMemberNames(int familyId) async {
     try {
       final rows = await _client
           .from('family_members')
-          .select('display_name')
+          .select('display_name, connection_status')
           .eq('family_id', familyId)
+          .eq('connection_status', 'connected')
           .order('id', ascending: true);
       return (rows as List<dynamic>)
           .whereType<Map<String, dynamic>>()
@@ -230,6 +281,10 @@ class SupabaseFamilyService {
     return FocusSession.fromJson(updated);
   }
 
+  Future<void> deleteFocusSession(int id) async {
+    await _client.from('focus_sessions').delete().eq('id', id);
+  }
+
   // ===========================================================================
   // MEDICATION REMINDERS (Member-Private + Shared Only)
   // ===========================================================================
@@ -318,10 +373,14 @@ class SupabaseFamilyService {
   Future<WaterTracker> updateWaterIntake({
     required WaterTracker tracker,
     required int newIntakeMl,
+    int? newGoalMl,
   }) async {
     final clamped = newIntakeMl.clamp(0, 10000);
+    final goal = (newGoalMl ?? tracker.dailyGoalMl).clamp(500, 10000);
     if (tracker.id == null) {
-      final payload = tracker.copyWith(currentMl: clamped).toJson();
+      final payload = tracker
+          .copyWith(currentMl: clamped, dailyGoalMl: goal)
+          .toJson();
       if (currentUser != null) {
         payload['user_id'] = currentUser!.id;
       }
@@ -337,6 +396,7 @@ class SupabaseFamilyService {
         .from('water_trackers')
         .update({
           'current_ml': clamped,
+          'daily_goal_ml': goal,
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', tracker.id!)
@@ -347,7 +407,7 @@ class SupabaseFamilyService {
   }
 
   // ===========================================================================
-  // PARTNER & FRIEND INVITATIONS
+  // PARTNER & FRIEND INVITATIONS (@username Ecosystem + Lifecycle)
   // ===========================================================================
 
   Future<List<PartnerInvitation>> fetchPartnerInvitations(int familyId) async {
@@ -373,6 +433,27 @@ class SupabaseFamilyService {
         .single();
 
     return PartnerInvitation.fromJson(inserted);
+  }
+
+  Future<PartnerInvitation> updatePartnerInvitation({
+    required int id,
+    required String status,
+    required bool sharingPaused,
+  }) async {
+    final updated = await _client
+        .from('partner_invitations')
+        .update({
+          'status': status,
+          'sharing_paused': sharingPaused,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+    return PartnerInvitation.fromJson(updated);
+  }
+
+  Future<void> deletePartnerInvitation(int id) async {
+    await _client.from('partner_invitations').delete().eq('id', id);
   }
 
   RealtimeChannel subscribeToFamilyChanges({

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:family_app/core/config/supabase_config.dart';
 import 'package:family_app/data/services/prayer_time_service.dart';
 import 'package:family_app/data/services/voice_reminder_service.dart';
 import 'package:family_app/domain/models/family_models.dart';
@@ -81,5 +82,38 @@ void main() {
       expect(String.fromCharCodes(wav.sublist(0, 4)), 'RIFF');
       expect(String.fromCharCodes(wav.sublist(8, 12)), 'WAVE');
     }
+  });
+
+  test('Username ecosystem normalizes handles and manages partner invitations without personal emails', () {
+    expect(SupabaseConfig.normalizeUsernameHandle('@İlker Aydoğdu'), 'ilker_aydogdu');
+    expect(SupabaseConfig.normalizeUsernameHandle('@neslihan'), 'neslihan');
+    expect(
+      SupabaseConfig.usernameToInternalAuthIdentity('@neslihan'),
+      SupabaseConfig.defaultWifeEmail,
+    );
+    expect(
+      SupabaseConfig.usernameToInternalAuthIdentity('@ilker'),
+      SupabaseConfig.defaultHusbandEmail,
+    );
+
+    final inv = PartnerInvitation.fromJson({
+      'id': 5,
+      'family_id': 1,
+      'inviter_name': 'İlker',
+      'inviter_username': 'ilker',
+      'invitee_label': 'Neslihan',
+      'target_username': 'neslihan',
+      'relation_type': 'spouse',
+      'invite_code': 'AYDOGDU26',
+      'status': 'accepted',
+      'sharing_paused': false,
+    });
+    expect(inv.formattedInviterHandle, '@ilker');
+    expect(inv.formattedTargetHandle, '@neslihan');
+    expect(inv.sharingPaused, isFalse);
+
+    final paused = inv.copyWith(status: 'paused', sharingPaused: true);
+    expect(paused.status, 'paused');
+    expect(paused.sharingPaused, isTrue);
   });
 }
