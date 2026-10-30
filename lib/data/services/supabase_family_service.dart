@@ -9,19 +9,8 @@ class SupabaseFamilyService {
 
   User? get currentUser => _client.auth.currentUser;
 
-  /// Signs in with the pre-seeded husband or wife account (1-tap couple switch)
-  /// or custom email/password.
-  Future<void> signInAsRole(String role) async {
-    final email = role == 'wife'
-        ? SupabaseConfig.defaultWifeEmail
-        : SupabaseConfig.defaultHusbandEmail;
-
-    if (currentUser?.email == email) return;
-
-    await _client.auth.signInWithPassword(
-      email: email,
-      password: SupabaseConfig.defaultCouplePassword,
-    );
+  Future<void> signOut() async {
+    await _client.auth.signOut();
   }
 
   Future<void> signInWithCredentials({
@@ -80,13 +69,30 @@ class SupabaseFamilyService {
       await _client.from('family_members').upsert({
         'family_id': targetFamilyId,
         'user_id': userId,
-        'role': roleLabel,
+        'role_label': roleLabel,
         'display_name': displayName.trim(),
-        'avatar_color': roleLabel == 'wife' ? '#EC4899' : '#2563EB',
+        'avatar_color': '#0F766E',
       }, onConflict: 'family_id,user_id');
     }
 
     return cleanEmail;
+  }
+
+  Future<List<String>> fetchConnectedMemberNames(int familyId) async {
+    try {
+      final rows = await _client
+          .from('family_members')
+          .select('display_name')
+          .eq('family_id', familyId)
+          .order('id', ascending: true);
+      return (rows as List<dynamic>)
+          .whereType<Map<String, dynamic>>()
+          .map((r) => (r['display_name'] ?? '').toString())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return const ['İlker', 'Neslihan'];
+    }
   }
 
   Future<FamilyProfile> fetchPrimaryFamily() async {
@@ -132,16 +138,24 @@ class SupabaseFamilyService {
     return FamilyProfile.fromJson(updated);
   }
 
+  /// Fetches ONLY the current member's private personal blocks + shared blocks.
+  /// Enforced both by PostgreSQL RLS (`schedule_blocks_select_policy`) and query filter.
   Future<List<ScheduleBlock>> fetchScheduleBlocks({
     required int familyId,
     required String planDate,
   }) async {
-    final rows = await _client
+    final uid = currentUser?.id;
+    var query = _client
         .from('schedule_blocks')
         .select()
         .eq('family_id', familyId)
-        .or('plan_date.eq.$planDate,is_recurring_daily.eq.true')
-        .order('start_time', ascending: true);
+        .or('plan_date.eq.$planDate,is_recurring_daily.eq.true');
+
+    if (uid != null) {
+      query = query.or('owner_role.eq.shared,created_by.eq.$uid');
+    }
+
+    final rows = await query.order('start_time', ascending: true);
 
     return (rows as List<dynamic>)
         .whereType<Map<String, dynamic>>()
@@ -217,15 +231,21 @@ class SupabaseFamilyService {
   }
 
   // ===========================================================================
-  // MEDICATION REMINDERS
+  // MEDICATION REMINDERS (Member-Private + Shared Only)
   // ===========================================================================
 
   Future<List<MedicationReminder>> fetchMedicationReminders(int familyId) async {
-    final rows = await _client
+    final uid = currentUser?.id;
+    var query = _client
         .from('medication_reminders')
         .select()
-        .eq('family_id', familyId)
-        .order('schedule_time', ascending: true);
+        .eq('family_id', familyId);
+
+    if (uid != null) {
+      query = query.or('owner_role.eq.shared,created_by.eq.$uid');
+    }
+
+    final rows = await query.order('schedule_time', ascending: true);
 
     return (rows as List<dynamic>)
         .whereType<Map<String, dynamic>>()
@@ -236,9 +256,13 @@ class SupabaseFamilyService {
   Future<MedicationReminder> createMedicationReminder(
     MedicationReminder reminder,
   ) async {
+    final payload = reminder.toJson();
+    if (currentUser != null) {
+      payload['created_by'] = currentUser!.id;
+    }
     final inserted = await _client
         .from('medication_reminders')
-        .insert(reminder.toJson())
+        .insert(payload)
         .select()
         .single();
 
@@ -269,15 +293,21 @@ class SupabaseFamilyService {
   }
 
   // ===========================================================================
-  // WATER TRACKERS
+  // WATER TRACKERS (Strictly Private to Logged-in Member)
   // ===========================================================================
 
   Future<List<WaterTracker>> fetchWaterTrackers(int familyId) async {
-    final rows = await _client
+    final uid = currentUser?.id;
+    var query = _client
         .from('water_trackers')
         .select()
-        .eq('family_id', familyId)
-        .order('id', ascending: true);
+        .eq('family_id', familyId);
+
+    if (uid != null) {
+      query = query.eq('user_id', uid);
+    }
+
+    final rows = await query.order('id', ascending: true);
 
     return (rows as List<dynamic>)
         .whereType<Map<String, dynamic>>()
@@ -291,9 +321,13 @@ class SupabaseFamilyService {
   }) async {
     final clamped = newIntakeMl.clamp(0, 10000);
     if (tracker.id == null) {
+      final payload = tracker.copyWith(currentMl: clamped).toJson();
+      if (currentUser != null) {
+        payload['user_id'] = currentUser!.id;
+      }
       final inserted = await _client
           .from('water_trackers')
-          .insert(tracker.copyWith(currentMl: clamped).toJson())
+          .insert(payload)
           .select()
           .single();
       return WaterTracker.fromJson(inserted);

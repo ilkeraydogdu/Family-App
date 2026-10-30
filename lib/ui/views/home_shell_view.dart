@@ -6,6 +6,7 @@ import '../view_models/planner_view_model.dart';
 import '../widgets/auth_and_invite_sheet.dart';
 import '../widgets/block_editor_sheet.dart';
 import '../widgets/completion_review_sheet.dart';
+import 'auth_onboarding_view.dart';
 import 'phone_lockdown_shield_view.dart';
 
 class HomeShellView extends StatefulWidget {
@@ -26,6 +27,10 @@ class _HomeShellViewState extends State<HomeShellView> {
       listenable: widget.viewModel,
       builder: (context, _) {
         final vm = widget.viewModel;
+
+        if (!vm.isLoading && !vm.isAuthenticated) {
+          return AuthOnboardingView(viewModel: vm);
+        }
 
         if (vm.isPhoneLockShieldActive) {
           return PhoneLockdownShieldView(
@@ -67,7 +72,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        vm.familyProfile.name,
+                        '${vm.activeDisplayName} • Kişisel & Ortak Ajanda',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 15,
@@ -76,7 +81,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                       ),
                       Text(
-                        '${vm.activeDisplayName} • Uyanış ${vm.familyProfile.wakeUpTime} • Uyku ${vm.familyProfile.sleepTime}',
+                        'Uyanış ${vm.familyProfile.wakeUpTime} • Uyku ${vm.familyProfile.sleepTime} • ${vm.familyProfile.city}',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11,
@@ -89,39 +94,42 @@ class _HomeShellViewState extends State<HomeShellView> {
               ],
             ),
             actions: [
-              // 1-Tap Role Switcher (İlker <-> Eşim)
+              // Member Account & Partner Invite Button (No role switcher!)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => _openAuthAndInviteModal(context, vm),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const AppSvgIcon(
+                          svgData: AppSvgs.userSingle,
+                          size: 14,
+                          color: Color(0xFF0F172A),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          vm.activeDisplayName,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildRolePill(
-                        vm: vm,
-                        role: 'husband',
-                        label: 'İlker',
-                      ),
-                      _buildRolePill(
-                        vm: vm,
-                        role: 'wife',
-                        label: 'Eşim',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Üyelik & Eş Davet',
-                onPressed: () => _openAuthAndInviteModal(context, vm),
-                icon: const AppSvgIcon(
-                  svgData: AppSvgs.usersCouple,
-                  size: 20,
-                  color: Color(0xFF0F172A),
                 ),
               ),
               IconButton(
@@ -182,7 +190,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     Expanded(
                       child: switch (_selectedTabIndex) {
                         0 => _buildDailyAgendaTab(context, vm),
-                        1 => _buildCoupleComparisonTab(context, vm),
+                        1 => _buildSharedPlansAndPartnersTab(context, vm),
                         2 => _buildHealthWaterAndMedicationsTab(context, vm),
                         3 => _buildFocusLockdownTab(context, vm),
                         _ => _buildAnalyticsAndSkippedTab(context, vm),
@@ -232,7 +240,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     color: Color(0xFF0F172A),
                     size: 20,
                   ),
-                  label: 'Ajanda',
+                  label: 'Ajandam',
                 ),
                 NavigationDestination(
                   icon: AppSvgIcon(
@@ -245,7 +253,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     color: Color(0xFF0F172A),
                     size: 20,
                   ),
-                  label: 'Ortak & Eş',
+                  label: 'Ortak İşler',
                 ),
                 NavigationDestination(
                   icon: AppSvgIcon(
@@ -294,34 +302,8 @@ class _HomeShellViewState extends State<HomeShellView> {
     );
   }
 
-  Widget _buildRolePill({
-    required PlannerViewModel vm,
-    required String role,
-    required String label,
-  }) {
-    final active = vm.activeUserRole == role;
-    return GestureDetector(
-      onTap: () => vm.switchActivePersonRole(role),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF0F172A) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: active ? Colors.white : const Color(0xFF475569),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ===========================================================================
-  // TAB 1: GÜNLÜK SAATLİK AJANDA & CANLI NAMAZ VAKİTLERİ
+  // TAB 1: KİŞİSEL + ORTAK GÜNLÜK SAATLİK AJANDAM
   // ===========================================================================
   Widget _buildDailyAgendaTab(BuildContext context, PlannerViewModel vm) {
     final blocks = vm.filteredBlocks;
@@ -349,7 +331,9 @@ class _HomeShellViewState extends State<HomeShellView> {
               ),
             )
           else
-            ...blocks.map((block) => _buildScheduleBlockCard(context, vm, block)),
+            ...blocks.map(
+              (block) => _buildScheduleBlockCard(context, vm, block),
+            ),
         ],
       ),
     );
@@ -509,7 +493,7 @@ class _HomeShellViewState extends State<HomeShellView> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'İlaç: ${vm.takenMedicationCount}/${vm.medicationReminders.length} Tamam',
+                'İlaçlarım: ${vm.takenMedicationCount}/${vm.medicationReminders.length} Tamam',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 12,
@@ -537,13 +521,19 @@ class _HomeShellViewState extends State<HomeShellView> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _filterPill(vm, 'all', 'Tüm Planlar'),
+          _filterPill(vm, 'all', 'Tüm Planlarım (${vm.allBlocks.length})'),
           const SizedBox(width: 8),
-          _filterPill(vm, 'shared', 'Ortak Planlarımız'),
+          _filterPill(
+            vm,
+            'personal',
+            'Kişisel Planlarım (${vm.personalBlocksOnly.length})',
+          ),
           const SizedBox(width: 8),
-          _filterPill(vm, 'husband', 'İlker (Bağımsız + Ortak)'),
-          const SizedBox(width: 8),
-          _filterPill(vm, 'wife', 'Eşim (Bağımsız + Ortak)'),
+          _filterPill(
+            vm,
+            'shared',
+            'Ortak İşlerimiz (${vm.sharedBlocksOnly.length})',
+          ),
         ],
       ),
     );
@@ -579,11 +569,10 @@ class _HomeShellViewState extends State<HomeShellView> {
     PlannerViewModel vm,
     ScheduleBlock block,
   ) {
-    final ownerColor = switch (block.ownerRole) {
-      'husband' => const Color(0xFF2563EB),
-      'wife' => const Color(0xFFDB2777),
-      _ => const Color(0xFF0F766E),
-    };
+    final isShared = block.isSharedPlan;
+    final badgeColor = isShared
+        ? const Color(0xFF0F766E)
+        : const Color(0xFF334155);
 
     final statusBadge = switch (block.status) {
       'checked_in' => (
@@ -614,7 +603,7 @@ class _HomeShellViewState extends State<HomeShellView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top bar: Time + Owner badge + Status badge
+            // Top bar: Time + Visibility badge (Kişisel Plan vs Ortak Plan) + Status badge
             Row(
               children: [
                 Container(
@@ -654,16 +643,29 @@ class _HomeShellViewState extends State<HomeShellView> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: ownerColor.withValues(alpha: 0.08),
+                    color: badgeColor.withValues(alpha: 0.09),
                     borderRadius: BorderRadius.circular(7),
                   ),
-                  child: Text(
-                    block.ownerLabel,
-                    style: TextStyle(
-                      color: ownerColor,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppSvgIcon(
+                        svgData: isShared
+                            ? AppSvgs.usersCouple
+                            : AppSvgs.userSingle,
+                        size: 11,
+                        color: badgeColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        block.ownerLabel,
+                        style: TextStyle(
+                          color: badgeColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const Spacer(),
@@ -828,7 +830,6 @@ class _HomeShellViewState extends State<HomeShellView> {
               ),
             ],
 
-            // Completion notes or Skip reason banner (NO EMOJIS — pure SVG)
             if (block.completionNotes.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
@@ -895,7 +896,6 @@ class _HomeShellViewState extends State<HomeShellView> {
             ],
 
             const SizedBox(height: 10),
-            // Action buttons row
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -919,7 +919,8 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ),
                   ),
                 OutlinedButton(
-                  onPressed: () => _openCompletionReviewSheet(context, vm, block),
+                  onPressed: () =>
+                      _openCompletionReviewSheet(context, vm, block),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF0F172A),
                     side: const BorderSide(color: Color(0xFFCBD5E1)),
@@ -1003,16 +1004,19 @@ class _HomeShellViewState extends State<HomeShellView> {
   }
 
   // ===========================================================================
-  // TAB 2: ORTAK & EŞ / PARTNER SENKRONİZASYONU + ÜYELİK & DAVET
+  // TAB 2: ORTAK İŞLERİMİZ & PARTNER BAĞLANTISI (DİĞER ÜYENİN ÖZEL İŞLERİ GİZLİ)
   // ===========================================================================
-  Widget _buildCoupleComparisonTab(BuildContext context, PlannerViewModel vm) {
-    final husbandList = vm.husbandBlocks;
-    final wifeList = vm.wifeBlocks;
+  Widget _buildSharedPlansAndPartnersTab(
+    BuildContext context,
+    PlannerViewModel vm,
+  ) {
+    final sharedList = vm.sharedBlocksOnly;
+    final partnersText = vm.linkedPartnerNames.join(', ');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
       children: [
-        // Membership & Partner Invite Card
+        // Membership, Privacy & Partner Connection Card
         Container(
           padding: const EdgeInsets.all(16),
           decoration: _minimalCardDecoration(),
@@ -1024,11 +1028,11 @@ class _HomeShellViewState extends State<HomeShellView> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: const Color(0xFFF0FDF4),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const AppSvgIcon(
-                      svgData: AppSvgs.shareInvite,
+                      svgData: AppSvgs.usersCouple,
                       color: Color(0xFF0F766E),
                       size: 20,
                     ),
@@ -1039,19 +1043,20 @@ class _HomeShellViewState extends State<HomeShellView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Aktif Hesap: ${vm.activeDisplayName} (${vm.activeUserEmail})',
+                          'Ortak Plan Bağlantısı: $partnersText',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
-                            fontSize: 14,
+                            fontSize: 14.5,
                             color: Color(0xFF0F172A),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Davet Kodu: ${vm.familyProfile.inviteCode} • Ortak: ${vm.sharedBlocksOnly.length} Plan • Bağımsız: ${vm.personalBlocksOnly.length} Plan',
+                          'Aktif Üye: ${vm.activeDisplayName} (${vm.activeUserEmail}) • Kod: ${vm.familyProfile.inviteCode}',
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             color: Color(0xFF64748B),
                           ),
                         ),
@@ -1061,137 +1066,87 @@ class _HomeShellViewState extends State<HomeShellView> {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () => _openAuthAndInviteModal(context, vm),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF0F172A),
-                        padding: const EdgeInsets.symmetric(vertical: 11),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Üye Ol / Eş & Arkadaş Davet Et',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+              Container(
+                padding: const EdgeInsets.all(11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    const AppSvgIcon(
+                      svgData: AppSvgs.shieldLock,
+                      color: Color(0xFF0F766E),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Gizlilik Koruması Aktif: Sizin ${vm.personalBlocksOnly.length} kişisel planınız yalnızca bu telefonda görünür. $partnersText ile sadece aşağıdaki ${sharedList.length} ortak plan paylaşılır.',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF334155),
+                          height: 1.35,
                         ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => _openAuthAndInviteModal(context, vm),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _buildPersonColumn(
-                title: 'İlker (Benim Günü)',
-                color: const Color(0xFF2563EB),
-                blocks: husbandList,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildPersonColumn(
-                title: 'Eşimin Günü',
-                color: const Color(0xFFDB2777),
-                blocks: wifeList,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPersonColumn({
-    required String title,
-    required Color color,
-    required List<ScheduleBlock> blocks,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: _minimalCardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
-                    fontSize: 13,
+                  child: const Text(
+                    'Eş / Arkadaş Davet Et & Hesap Ayarları',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
             ],
           ),
-          const Divider(height: 18, color: Color(0xFFE2E8F0)),
-          ...blocks.map(
-            (b) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${b.startTime}-${b.endTime}',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: color,
-                        ),
-                      ),
-                      Text(
-                        b.ownerRole == 'shared' ? 'Ortak' : 'Bağımsız',
-                        style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    b.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                '$partnersText İle Ortak Planlarımız (${sharedList.length})',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (sharedList.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: _minimalCardDecoration(),
+            child: const Text(
+              'Henüz ortak işaretlenmiş bir plan bulunmuyor.',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
+          )
+        else
+          ...sharedList.map(
+            (block) => _buildScheduleBlockCard(context, vm, block),
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -1243,7 +1198,10 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ),
                     const Text(
                       'İlaç, su ve ders hatırlatmaları doğrudan telefon bildirim merkezine gönderilir',
-                      style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
                   ],
                 ),
@@ -1287,7 +1245,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Günlük Su Hatırlatıcı (${vm.activeDisplayName})',
+                          'Kişisel Su Hatırlatıcım (${vm.activeDisplayName})',
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -1407,7 +1365,7 @@ class _HomeShellViewState extends State<HomeShellView> {
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
-                'İlaç & Vitamin Hatırlatıcıları',
+                'İlaç & Vitamin Hatırlatıcılarım',
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 15,
@@ -1441,9 +1399,6 @@ class _HomeShellViewState extends State<HomeShellView> {
   }
 
   Widget _buildMedicationCard(PlannerViewModel vm, MedicationReminder med) {
-    final roleLabel = med.ownerRole == 'wife'
-        ? 'Eşim'
-        : (med.ownerRole == 'husband' ? 'İlker' : 'Ortak');
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -1508,7 +1463,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            roleLabel,
+                            med.ownerLabel,
                             style: const TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
@@ -1637,7 +1592,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ),
                   ),
                   onPressed: () => vm.activatePhoneLockdownShield(
-                    title: 'Aile Odak Saati (Sadece Aramalar Açık)',
+                    title: 'Odak Saati (Sadece Aramalar Açık)',
                   ),
                   child: const Text(
                     'Şimdi Telefon Kısıtlama Modunu Başlat',
@@ -1661,22 +1616,38 @@ class _HomeShellViewState extends State<HomeShellView> {
         ...vm.focusSessions.map(
           (session) => Container(
             margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: _minimalCardDecoration(),
-            child: SwitchListTile(
-              title: Text(
-                session.title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: Color(0xFF0F172A),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        session.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${session.startTime} - ${session.endTime} • Sadece Aramalar Serbest',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              subtitle: Text(
-                '${session.startTime} - ${session.endTime} • Sadece Aramalar Serbest',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
-              value: session.isActive,
-              onChanged: (_) => vm.toggleFocusSession(session),
+                Switch(
+                  value: session.isActive,
+                  onChanged: (_) => vm.toggleFocusSession(session),
+                ),
+              ],
             ),
           ),
         ),
@@ -1923,6 +1894,7 @@ class _HomeShellViewState extends State<HomeShellView> {
       builder: (_) => BlockEditorSheet(
         familyId: vm.familyProfile.id,
         planDate: vm.formattedSelectedDate,
+        personalRoleKey: vm.memberRoleKey,
         existingBlock: existing,
         onSave: vm.saveOrCreateBlock,
       ),
@@ -1956,7 +1928,7 @@ class _HomeShellViewState extends State<HomeShellView> {
     final doseCtrl = TextEditingController(text: '1 Kapsül');
     final timeCtrl = TextEditingController(text: '13:00');
     String mealRelation = 'Tok Karnına';
-    String ownerRole = vm.activeUserRole;
+    String ownerRole = vm.memberRoleKey;
 
     showDialog(
       context: context,
@@ -1990,7 +1962,9 @@ class _HomeShellViewState extends State<HomeShellView> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: mealRelation,
-                  decoration: const InputDecoration(labelText: 'Kullanım Şekli'),
+                  decoration: const InputDecoration(
+                    labelText: 'Kullanım Şekli',
+                  ),
                   items: const [
                     DropdownMenuItem(
                       value: 'Tok Karnına',
@@ -2012,16 +1986,17 @@ class _HomeShellViewState extends State<HomeShellView> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: ownerRole,
-                  decoration: const InputDecoration(labelText: 'Kimin İlacı?'),
-                  items: const [
+                  decoration: const InputDecoration(
+                    labelText: 'Görünürlük & Gizlilik',
+                  ),
+                  items: [
                     DropdownMenuItem(
-                      value: 'husband',
-                      child: Text('İlker (Ben)'),
+                      value: vm.memberRoleKey,
+                      child: const Text('Kişisel (Sadece Ben Görürüm)'),
                     ),
-                    DropdownMenuItem(value: 'wife', child: Text('Eşim')),
-                    DropdownMenuItem(
+                    const DropdownMenuItem(
                       value: 'shared',
-                      child: Text('Ortak (İkimiz)'),
+                      child: Text('Ortak Hatırlatıcı (Beraber Görülür)'),
                     ),
                   ],
                   onChanged: (v) {
@@ -2068,7 +2043,7 @@ class _HomeShellViewState extends State<HomeShellView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Aile Rutini & Namaz Şehri Ayarları'),
+        title: const Text('Rutin & Namaz Şehri Ayarları'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

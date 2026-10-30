@@ -101,15 +101,13 @@ class ScheduleBlock {
       checklistItems.where((item) => item.done).length;
 
   String get ownerLabel {
-    switch (ownerRole) {
-      case 'husband':
-        return 'Kişisel (İlker)';
-      case 'wife':
-        return 'Kişisel (Eşim)';
-      default:
-        return 'Ortak Plan';
+    if (ownerRole == 'shared') {
+      return 'Ortak Plan';
     }
+    return 'Kişisel Plan (Özel)';
   }
+
+  bool get isSharedPlan => ownerRole == 'shared';
 
   String get statusLabel {
     switch (status) {
@@ -320,14 +318,10 @@ class MedicationReminder {
   }
 
   String get ownerLabel {
-    switch (ownerRole) {
-      case 'husband':
-        return 'İlker';
-      case 'wife':
-        return 'Eşim';
-      default:
-        return 'Ortak';
+    if (ownerRole == 'shared') {
+      return 'Ortak';
     }
+    return 'Kişisel (Özel)';
   }
 
   MedicationReminder copyWith({

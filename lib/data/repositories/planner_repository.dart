@@ -16,8 +16,8 @@ class PlannerRepository {
 
   User? get currentUser => _supabaseService.currentUser;
 
-  Future<void> ensureSignedInAsRole(String role) async {
-    await _supabaseService.signInAsRole(role);
+  Future<void> signOut() async {
+    await _supabaseService.signOut();
   }
 
   Future<void> signInCustom(String email, String password) async {
@@ -41,6 +41,10 @@ class PlannerRepository {
       roleLabel: roleLabel,
       inviteCode: inviteCode,
     );
+  }
+
+  Future<List<String>> loadConnectedMemberNames(int familyId) {
+    return _supabaseService.fetchConnectedMemberNames(familyId);
   }
 
   Future<FamilyProfile> loadFamilyProfile() {

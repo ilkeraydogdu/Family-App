@@ -37,7 +37,7 @@ void main() {
 
     final block = ScheduleBlock.fromJson(json);
     expect(block.title, 'Gitar Dersi');
-    expect(block.ownerLabel, 'Kişisel (Eşim)');
+    expect(block.ownerLabel, 'Kişisel Plan (Özel)');
     expect(block.completedChecklistCount, 1);
     expect(block.checklistItems.length, 2);
   });

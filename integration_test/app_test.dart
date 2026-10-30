@@ -35,17 +35,16 @@ void main() {
     await viewModel.initialize();
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    expect(find.textContaining('Aydoğdu Ailesi'), findsOneWidget);
     expect(find.textContaining('Canlı Diyanet Namaz Vakitleri'), findsOneWidget);
 
-    await tester.tap(find.text('Ortak & Eş'));
+    await tester.tap(find.text('Ortak İşler'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('İlker (Benim Günü)'), findsOneWidget);
+    expect(find.textContaining('Gizlilik Koruması Aktif'), findsOneWidget);
 
     await tester.tap(find.text('İlaç & Su'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Günlük Su Hatırlatıcı'), findsOneWidget);
-    expect(find.textContaining('İlaç & Vitamin Hatırlatıcıları'), findsOneWidget);
+    expect(find.textContaining('Kişisel Su Hatırlatıcım'), findsOneWidget);
+    expect(find.textContaining('İlaç & Vitamin Hatırlatıcılarım'), findsOneWidget);
 
     await tester.tap(find.text('Odak Kilit'));
     await tester.pumpAndSettle();

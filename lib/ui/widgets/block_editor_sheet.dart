@@ -5,6 +5,7 @@ import '../../domain/models/family_models.dart';
 class BlockEditorSheet extends StatefulWidget {
   final int familyId;
   final String planDate;
+  final String personalRoleKey;
   final ScheduleBlock? existingBlock;
   final ValueChanged<ScheduleBlock> onSave;
 
@@ -12,6 +13,7 @@ class BlockEditorSheet extends StatefulWidget {
     super.key,
     required this.familyId,
     required this.planDate,
+    this.personalRoleKey = 'husband',
     this.existingBlock,
     required this.onSave,
   });
@@ -48,7 +50,7 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
     _descController = TextEditingController(text: b?.description ?? '');
     _startTimeController = TextEditingController(text: b?.startTime ?? '09:00');
     _endTimeController = TextEditingController(text: b?.endTime ?? '11:00');
-    _ownerRole = b?.ownerRole ?? 'shared';
+    _ownerRole = b?.ownerRole ?? widget.personalRoleKey;
     _category = b?.category ?? 'lesson';
     _isRecurringDaily = b?.isRecurringDaily ?? true;
     _isPrayerAnchored = b?.isPrayerAnchored ?? false;
@@ -198,32 +200,29 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
             ),
             const SizedBox(height: 14),
             Text(
-              'Kimin Planı?',
+              'Plan Gizliliği & Görünürlük',
               style: Theme.of(context).textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
-            SegmentedButton<String>(
+            SegmentedButton<bool>(
               segments: const [
                 ButtonSegment(
-                  value: 'shared',
-                  label: Text('İkimiz (Ortak)'),
-                  icon: Icon(Icons.favorite),
+                  value: false,
+                  label: Text('Kişisel Planım (Sadece Ben)'),
+                  icon: Icon(Icons.lock_outline),
                 ),
                 ButtonSegment(
-                  value: 'husband',
-                  label: Text('Ben (İlker)'),
-                  icon: Icon(Icons.person),
-                ),
-                ButtonSegment(
-                  value: 'wife',
-                  label: Text('Eşim'),
-                  icon: Icon(Icons.person_2),
+                  value: true,
+                  label: Text('Ortak Plan (Beraber Görülür)'),
+                  icon: Icon(Icons.group_outlined),
                 ),
               ],
-              selected: {_ownerRole},
-              onSelectionChanged: (val) =>
-                  setState(() => _ownerRole = val.first),
+              selected: {_ownerRole == 'shared'},
+              onSelectionChanged: (val) => setState(
+                () => _ownerRole =
+                    val.first ? 'shared' : widget.personalRoleKey,
+              ),
             ),
             const SizedBox(height: 14),
             Row(

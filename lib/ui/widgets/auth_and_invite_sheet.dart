@@ -13,7 +13,7 @@ class AuthAndInviteSheet extends StatefulWidget {
 }
 
 class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
-  int _modeIndex = 0; // 0: Hesap & Üyelik, 1: Eş / Arkadaş Davet Et
+  int _modeIndex = 0; // 0: Eş / Arkadaş Davet & Bağlantılar, 1: Üyelik & Hesap
   bool _isSignUp = true;
   bool _isSubmitting = false;
   String? _statusBanner;
@@ -22,7 +22,6 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
   late final TextEditingController _joinInviteCodeController;
-  String _selectedRole = 'husband';
 
   late final TextEditingController _inviteeNameController;
   late final TextEditingController _inviteeEmailController;
@@ -31,14 +30,9 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedRole = widget.viewModel.activeUserRole;
-    _nameController = TextEditingController(
-      text: widget.viewModel.activeDisplayName,
-    );
-    _emailController = TextEditingController(
-      text: widget.viewModel.activeUserEmail,
-    );
-    _passwordController = TextEditingController(text: 'FamilyApp2026!');
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
     _joinInviteCodeController = TextEditingController(
       text: widget.viewModel.familyProfile.inviteCode,
     );
@@ -97,21 +91,22 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Hesap, Üyelik & Eş Davet Sistemi',
-                        style: TextStyle(
-                          fontSize: 16,
+                        '${widget.viewModel.activeDisplayName} • Hesap & Ortak Bağlantılar',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15.5,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF0F172A),
                         ),
                       ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Her telefonda ayrı üyelik, ortak veya bağımsız planlama',
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Kişisel planlarınız gizlidir; yalnızca ortak işler beraber görülür',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),
@@ -136,15 +131,15 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                   Expanded(
                     child: _buildModeTab(
                       index: 0,
-                      label: 'Üye Ol / Giriş Yap',
-                      svg: AppSvgs.userSingle,
+                      label: 'Ortak Eşleşme & Davet',
+                      svg: AppSvgs.shareInvite,
                     ),
                   ),
                   Expanded(
                     child: _buildModeTab(
                       index: 1,
-                      label: 'Eş & Arkadaş Davet Et',
-                      svg: AppSvgs.shareInvite,
+                      label: 'Hesabım / Çıkış Yap',
+                      svg: AppSvgs.userSingle,
                     ),
                   ),
                 ],
@@ -186,9 +181,9 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
             ],
 
             if (_modeIndex == 0)
-              _buildAuthSection(context)
+              _buildPartnerInviteSection(context)
             else
-              _buildPartnerInviteSection(context),
+              _buildAccountSection(context),
           ],
         ),
       ),
@@ -208,15 +203,6 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         decoration: BoxDecoration(
           color: selected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -248,10 +234,82 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
     );
   }
 
-  Widget _buildAuthSection(BuildContext context) {
+  Widget _buildAccountSection(BuildContext context) {
+    final vm = widget.viewModel;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const AppSvgIcon(
+                  svgData: AppSvgs.userSingle,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vm.activeDisplayName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    Text(
+                      vm.activeUserEmail,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              OutlinedButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await vm.signOut();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFB91C1C),
+                  side: const BorderSide(color: Color(0xFFFECACA)),
+                ),
+                child: const Text(
+                  'Çıkış Yap',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Farklı Bir Üye Hesabı Oluştur veya Giriş Yap',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 8),
         Row(
           children: [
             ChoiceChip(
@@ -261,7 +319,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
             ),
             const SizedBox(width: 8),
             ChoiceChip(
-              label: const Text('Mevcut Hesap Girişi'),
+              label: const Text('Mevcut Hesaba Giriş'),
               selected: !_isSignUp,
               onSelected: (_) => setState(() => _isSignUp = false),
             ),
@@ -271,7 +329,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         if (_isSignUp) ...[
           TextField(
             controller: _nameController,
-            decoration: _inputDecoration('Ad Soyad / Görünür İsim (Örn: İlker)'),
+            decoration: _inputDecoration('Ad Soyad'),
           ),
           const SizedBox(height: 10),
         ],
@@ -286,39 +344,14 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
           obscureText: true,
           decoration: _inputDecoration('Şifre'),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: _selectedRole,
-                isExpanded: true,
-                decoration: _inputDecoration('Cihaz Profil Rolü'),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'husband',
-                    child: Text('İlker (Birincil Hesap)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'wife',
-                    child: Text('Eşim / Partner Hesabı'),
-                  ),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _selectedRole = v);
-                },
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: _joinInviteCodeController,
-                decoration: _inputDecoration('Eşleşme Davet Kodu'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
+        if (_isSignUp) ...[
+          const SizedBox(height: 10),
+          TextField(
+            controller: _joinInviteCodeController,
+            decoration: _inputDecoration('Ortak Plan Eşleşme Kodu (Opsiyonel)'),
+          ),
+        ],
+        const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
           child: FilledButton(
@@ -333,9 +366,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
             child: Text(
               _isSubmitting
                   ? 'İşleniyor...'
-                  : (_isSignUp
-                        ? 'Üyeliği Kaydet & Cihazı Eşleştir'
-                        : 'Hesaba Giriş Yap'),
+                  : (_isSignUp ? 'Yeni Üye Olarak Başla' : 'Hesaba Giriş Yap'),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
@@ -369,11 +400,8 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Aile & Partner Eşleşme Kodunuz',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF64748B),
-                      ),
+                      'Ortak Plan Eşleşme Kodunuz',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -398,9 +426,9 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  'Ortak + Bağımsız Plan',
+                  'Sadece Ortak İşler Paylaşılır',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF0F766E),
                   ),
@@ -411,7 +439,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         ),
         const SizedBox(height: 14),
         const Text(
-          'Yeni Eş / Arkadaş / Aile Üyesi Davet Gönder',
+          'Eş / Arkadaş Davet Et (Yalnızca Ortak Planları Görür)',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
@@ -424,7 +452,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
             Expanded(
               child: TextField(
                 controller: _inviteeNameController,
-                decoration: _inputDecoration('Davet Edilen İsim (Örn: Eşim)'),
+                decoration: _inputDecoration('Davet Edilen Üye Adı'),
               ),
             ),
             const SizedBox(width: 10),
@@ -432,15 +460,15 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
               child: DropdownButtonFormField<String>(
                 initialValue: _relationshipType,
                 isExpanded: true,
-                decoration: _inputDecoration('Yakınlık Derecesi'),
+                decoration: _inputDecoration('Bağlantı Tipi'),
                 items: const [
                   DropdownMenuItem(
                     value: 'Eş / Hayat Arkadaşı',
-                    child: Text('Eş / Hayat Arkadaşı'),
+                    child: Text('Eş / Partner'),
                   ),
                   DropdownMenuItem(
                     value: 'Arkadaş / Çalışma Partneri',
-                    child: Text('Arkadaş / Partner'),
+                    child: Text('Arkadaş'),
                   ),
                   DropdownMenuItem(
                     value: 'Aile Üyesi',
@@ -472,7 +500,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
               ),
             ),
             child: const Text(
-              'Davet Oluştur & Cihaz Bildirimi Gönder',
+              'Davet Oluştur & Bildirim Gönder',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
@@ -480,7 +508,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         if (invitations.isNotEmpty) ...[
           const SizedBox(height: 14),
           const Text(
-            'Kayıtlı Partner & Arkadaş Bağlantıları',
+            'Ortak Plan Bağlantıları',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -563,21 +591,20 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
       displayName: _nameController.text,
       email: _emailController.text,
       password: _passwordController.text,
-      roleLabel: _selectedRole,
       inviteCode: _joinInviteCodeController.text,
     );
     if (!mounted) return;
     setState(() {
       _isSubmitting = false;
       _statusBanner = err == null
-          ? 'Hesap aktif! Ortak ve kişisel planlarınız cihazınızla eşleştirildi.'
+          ? 'Hesap aktif! Kişisel ajandanız ve ortak planlarınız yüklendi.'
           : 'Uyarı: $err';
     });
   }
 
   Future<void> _sendPartnerInvite() async {
     final label = _inviteeNameController.text.trim().isEmpty
-        ? 'Eşim / Partnerim'
+        ? 'Neslihan'
         : _inviteeNameController.text.trim();
     await widget.viewModel.createPartnerInvite(
       inviteeLabel: label,
@@ -589,7 +616,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
       _inviteeNameController.clear();
       _inviteeEmailController.clear();
       _statusBanner =
-          '$label için ortak/bağımsız plan daveti oluşturuldu ve bildirim gönderildi.';
+          '$label için ortak plan daveti oluşturuldu (kişisel planlarınız gizli kalır).';
     });
   }
 }
