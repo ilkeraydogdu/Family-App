@@ -6,6 +6,8 @@ import '../view_models/planner_view_model.dart';
 import '../widgets/auth_and_invite_sheet.dart';
 import '../widgets/block_editor_sheet.dart';
 import '../widgets/completion_review_sheet.dart';
+import '../widgets/full_screen_alarm_overlay.dart';
+import '../widgets/spiritual_widget_sheet.dart';
 import 'auth_onboarding_view.dart';
 import 'phone_lockdown_shield_view.dart';
 
@@ -36,6 +38,13 @@ class _HomeShellViewState extends State<HomeShellView> {
           return PhoneLockdownShieldView(
             reasonTitle: vm.activeLockdownReason,
             onExitLockdown: vm.deactivatePhoneLockdownShield,
+          );
+        }
+
+        if (vm.activeAlarmSession != null) {
+          return FullScreenAlarmOverlay(
+            viewModel: vm,
+            session: vm.activeAlarmSession!,
           );
         }
 
@@ -313,6 +322,59 @@ class _HomeShellViewState extends State<HomeShellView> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
         children: [
+          if (vm.snoozedAlarmSummary != null) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFF59E0B)),
+              ),
+              child: Row(
+                children: [
+                  const AppSvgIcon(
+                    svgData: AppSvgs.bellNotification,
+                    size: 16,
+                    color: Color(0xFFB45309),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      vm.snoozedAlarmSummary!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF92400E),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: vm.stopAllVoiceReminders,
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF92400E),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'İptal',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          DailySpiritualCard(
+            viewModel: vm,
+            onOpenWidgetCustomizer: () =>
+                _openSpiritualWidgetSheet(context, vm),
+          ),
+          const SizedBox(height: 12),
           _buildLivePrayerTimesBanner(vm),
           const SizedBox(height: 12),
           _buildQuickHealthSummaryStrip(vm),
@@ -752,9 +814,9 @@ class _HomeShellViewState extends State<HomeShellView> {
                   ),
                 if (block.voiceReminderEnabled)
                   _featureTag(
-                    svg: AppSvgs.voiceWave,
+                    svg: AppSvgs.bellNotification,
                     text:
-                        '${block.remindBeforeMinutes} dk kala • ${block.repeatCount}x sesli & bildirim',
+                        '${block.remindBeforeMinutes} dk kala • ${block.repeatCount}x Tekrarlı Alarm',
                     color: const Color(0xFF4F46E5),
                   ),
                 if (block.phoneLockEnabled)
@@ -939,10 +1001,10 @@ class _HomeShellViewState extends State<HomeShellView> {
                       visualDensity: VisualDensity.compact,
                     ),
                     child: const Text(
-                      'Sesli & Bildirim Test',
+                      'Alarmı Çaldır',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -2087,6 +2149,15 @@ class _HomeShellViewState extends State<HomeShellView> {
           ),
         ],
       ),
+    );
+  }
+
+  void _openSpiritualWidgetSheet(BuildContext context, PlannerViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SpiritualWidgetCustomizerSheet(viewModel: vm),
     );
   }
 }

@@ -75,12 +75,15 @@ class DeviceNotificationService {
     }
 
     const androidDetails = AndroidNotificationDetails(
-      'family_planner_high_channel',
-      'Plan, İlaç ve Su Hatırlatıcıları',
+      'family_planner_alarm_channel_v2',
+      'Saatlik Plan & İlaç Alarmları',
       channelDescription:
-          'Günlük saatlik plan, namaz, ilaç ve su tüketimi cihaz bildirimleri',
+          'Günlük saatlik plan, namaz, ilaç ve su tüketimi yüksek öncelikli alarm bildirimleri',
       importance: Importance.max,
-      priority: Priority.high,
+      priority: Priority.max,
+      category: AndroidNotificationCategory.alarm,
+      fullScreenIntent: true,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
       playSound: true,
       enableVibration: true,
     );
@@ -91,6 +94,7 @@ class DeviceNotificationService {
       presentSound: true,
       presentBanner: true,
       presentList: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
     const details = NotificationDetails(

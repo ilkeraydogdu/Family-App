@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/supabase_config.dart';
 import '../../data/repositories/planner_repository.dart';
+import '../../data/services/daily_spiritual_service.dart';
 import '../../data/services/device_notification_service.dart';
 import '../../data/services/voice_reminder_service.dart';
 import '../../domain/models/family_models.dart';
@@ -13,13 +14,16 @@ class PlannerViewModel extends ChangeNotifier {
   final PlannerRepository _repository;
   final VoiceReminderService _voiceService;
   final DeviceNotificationService _notificationService;
+  final DailySpiritualService _spiritualService;
 
   PlannerViewModel({
     required this._repository,
     required this._voiceService,
     DeviceNotificationService? notificationService,
+    DailySpiritualService? spiritualService,
   }) : _notificationService =
-           notificationService ?? DeviceNotificationService();
+           notificationService ?? DeviceNotificationService(),
+       _spiritualService = spiritualService ?? DailySpiritualService();
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;
@@ -89,6 +93,36 @@ class PlannerViewModel extends ChangeNotifier {
 
   String? _lastSpokenReminder;
   String? get lastSpokenReminder => _lastSpokenReminder;
+
+  ActiveAlarmSession? _activeAlarmSession;
+  ActiveAlarmSession? get activeAlarmSession => _activeAlarmSession;
+
+  String? _snoozedAlarmSummary;
+  String? get snoozedAlarmSummary => _snoozedAlarmSummary;
+  Timer? _snoozeWakeTimer;
+
+  DailySpiritualContent _dailySpiritual = const DailySpiritualContent(
+    dateKey: '2026-10-30',
+    hadithText:
+        'Ameller niyetlere göredir. Herkese ancak niyet ettiği şey vardır.',
+    hadithSource: 'Sahîh-i Buhârî, Bed\'ü\'l-Vahy 1 (Açık Kaynak Hadis API)',
+    hadithNumber: 'Hadis #1',
+    duaArabic:
+        'رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا',
+    duaTurkish:
+        'Rabbimiz! Bize eşlerimizden ve çocuklarımızdan gözümüzün aydınlığı olacak insanlar ihsan et ve bizi, Allah\'a karşı gelmekten sakınanlara önder yap.',
+    duaSource: 'Furkan Suresi, 74. Ayet • Aile & Eş Duası (Diyanet Açık Kaynak)',
+    morningEveningZikir:
+        'Sabah/Akşam Zikri: "Hasbiyallâhu lâ ilâhe illâ hû, aleyhi tevekkeltü ve hüve Rabbü\'l-arşi\'l-azîm." (Tevbe, 129)',
+    isLiveFromOpenSource: true,
+  );
+  DailySpiritualContent get dailySpiritual => _dailySpiritual;
+
+  String _activeWidgetStyle = 'hadith_dua';
+  String get activeWidgetStyle => _activeWidgetStyle;
+
+  String get selectedAlarmToneId => _voiceService.selectedToneId;
+  bool get voiceTitleAfterChime => _voiceService.voiceTitleAfterChime;
 
   bool get deviceNotificationsGranted => _notificationService.permissionGranted;
 
@@ -216,8 +250,59 @@ class PlannerViewModel extends ChangeNotifier {
       _selectedDate,
     );
     await _reloadBlocksAndSessions(alignPrayerTimes: true);
+    unawaited(_loadDailySpiritualAndSyncWidget());
     _setupRealtimeSubscription();
     _startMinuteClockWatcher();
+  }
+
+  Future<void> _loadDailySpiritualAndSyncWidget({
+    bool nextRotation = false,
+  }) async {
+    try {
+      _dailySpiritual = await _spiritualService.fetchDailySpiritual(
+        nextRotation: nextRotation,
+      );
+      notifyListeners();
+      await syncPhoneHomeScreenWidget(requestPin: false);
+    } catch (e) {
+      debugPrint('Günlük hadis/dua yükleme bilgi: $e');
+    }
+  }
+
+  Future<void> refreshDailySpiritualFromOpenSource() async {
+    await _loadDailySpiritualAndSyncWidget(nextRotation: true);
+  }
+
+  Future<bool> syncPhoneHomeScreenWidget({
+    String? styleOverride,
+    bool requestPin = false,
+  }) async {
+    if (styleOverride != null) {
+      _activeWidgetStyle = styleOverride;
+      notifyListeners();
+    }
+    final nextBlock = filteredBlocks
+        .where((b) => b.status == 'planned')
+        .firstOrNull;
+    final nextSummary = nextBlock != null
+        ? 'Sıradaki: ${nextBlock.startTime} ${nextBlock.title}'
+        : 'Tüm planlar tamamlandı';
+
+    final ok = await _spiritualService.syncToPhoneHomeScreenWidget(
+      content: _dailySpiritual,
+      prayerTimes: _prayerTimes,
+      nextPlanSummary: nextSummary,
+      widgetStyle: _activeWidgetStyle,
+      requestPinOnAndroid: requestPin,
+    );
+    if (requestPin) {
+      await _notificationService.sendDeviceNotification(
+        id: 8801,
+        title: 'Günün Hadisi & Duası Widget Güncellendi',
+        body: _dailySpiritual.hadithText,
+      );
+    }
+    return ok;
   }
 
   void _syncCurrentUserMetadata() {
@@ -521,11 +606,14 @@ class PlannerViewModel extends ChangeNotifier {
   }
 
   void triggerVoiceReminderNow(ScheduleBlock block) {
+    _snoozeWakeTimer?.cancel();
+    _snoozedAlarmSummary = null;
+
     _notificationService.sendDeviceNotification(
       id: (block.id ?? 1) + 2000,
-      title: 'Plan Hatırlatıcı: ${block.title}',
+      title: 'ALARM: ${block.title} (${block.startTime})',
       body:
-          '${block.startTime} - ${block.endTime} (${block.remindBeforeMinutes} dk kala hatırlatma • ${block.repeatCount}x tekrar)',
+          '${block.remindBeforeMinutes} dk sonra başlıyor • ${block.repeatCount}x tekrarlı alarm aktif',
     );
     _voiceService.startRepeatingReminder(
       block: block,
@@ -533,10 +621,87 @@ class PlannerViewModel extends ChangeNotifier {
         _lastSpokenReminder = msg;
         notifyListeners();
       },
+      onAlarmTriggered: (triggeredBlock, attempt) {
+        _activeAlarmSession = ActiveAlarmSession(
+          block: triggeredBlock,
+          currentAttempt: attempt,
+          maxAttempts: triggeredBlock.repeatCount,
+          selectedToneId: _voiceService.selectedToneId,
+          voiceTitleAfterChime: _voiceService.voiceTitleAfterChime,
+          triggeredAt: DateTime.now(),
+        );
+        notifyListeners();
+      },
     );
   }
 
+  Future<void> changeAlarmTone(String toneId) async {
+    _voiceService.setAlarmTone(toneId);
+    final current = _activeAlarmSession;
+    if (current != null) {
+      _activeAlarmSession = current.copyWith(selectedToneId: toneId);
+      notifyListeners();
+      await _voiceService.startAlarmRinging(
+        current.block,
+        attempt: current.currentAttempt,
+        toneOverride: toneId,
+      );
+    } else {
+      notifyListeners();
+    }
+  }
+
+  void toggleVoiceTitleOption(bool enabled) {
+    _voiceService.setVoiceTitleOption(enabled);
+    final current = _activeAlarmSession;
+    if (current != null) {
+      _activeAlarmSession = current.copyWith(voiceTitleAfterChime: enabled);
+    }
+    notifyListeners();
+  }
+
+  Future<void> checkInFromActiveAlarm() async {
+    final current = _activeAlarmSession;
+    _activeAlarmSession = null;
+    _snoozeWakeTimer?.cancel();
+    _snoozedAlarmSummary = null;
+    await _voiceService.stopAll();
+    notifyListeners();
+    if (current != null) {
+      await checkInToBlock(current.block);
+    }
+  }
+
+  Future<void> snoozeActiveAlarm({int? customMinutes}) async {
+    final current = _activeAlarmSession;
+    if (current == null) return;
+    final snoozeMins =
+        customMinutes ?? current.block.repeatIntervalMinutes.clamp(1, 30);
+    await _voiceService.stopAll();
+    _activeAlarmSession = null;
+    _snoozedAlarmSummary =
+        '"${current.block.title}" alarmı $snoozeMins dk ertelendi (${current.currentAttempt}/${current.maxAttempts} tekrar)';
+    notifyListeners();
+
+    _snoozeWakeTimer?.cancel();
+    _snoozeWakeTimer = Timer(Duration(minutes: snoozeMins), () {
+      _snoozedAlarmSummary = null;
+      triggerVoiceReminderNow(current.block);
+    });
+  }
+
+  Future<void> dismissActiveAlarm() async {
+    _snoozeWakeTimer?.cancel();
+    await _voiceService.stopAll();
+    _activeAlarmSession = null;
+    _lastSpokenReminder = null;
+    notifyListeners();
+  }
+
   Future<void> stopAllVoiceReminders() async {
+    _snoozeWakeTimer?.cancel();
+    _snoozedAlarmSummary = null;
+    _activeAlarmSession = null;
     await _voiceService.stopAll();
     _lastSpokenReminder = null;
     notifyListeners();

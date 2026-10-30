@@ -377,11 +377,11 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Sesli Hatırlatıcı & Tekrarlı Alarm',
+                'Polifonik Gerçek Alarm & Tekrarlı Zil',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: const Text(
-                '"Derse geldim / Başladım" diyene kadar sesli hatırlatır',
+                '"Derse geldim / Başladım" diyene kadar tam ekran alarm çalar',
               ),
               value: _voiceReminderEnabled,
               onChanged: (val) => setState(() => _voiceReminderEnabled = val),

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:family_app/data/services/prayer_time_service.dart';
+import 'package:family_app/data/services/voice_reminder_service.dart';
 import 'package:family_app/domain/models/family_models.dart';
 
 void main() {
@@ -69,5 +70,16 @@ void main() {
     expect(water.progressRatio, 0.5);
     expect(water.completedCups, 5);
     expect(water.totalGoalCups, 10);
+  });
+
+  test('VoiceReminderService generates valid polyphonic WAV alarm melodies', () {
+    final service = VoiceReminderService();
+    for (final toneId in VoiceReminderService.alarmToneLabels.keys) {
+      final wav = service.generateAlarmMelodyWav(toneId);
+      expect(wav.length, greaterThan(44));
+      // RIFF header check
+      expect(String.fromCharCodes(wav.sublist(0, 4)), 'RIFF');
+      expect(String.fromCharCodes(wav.sublist(8, 12)), 'WAVE');
+    }
   });
 }

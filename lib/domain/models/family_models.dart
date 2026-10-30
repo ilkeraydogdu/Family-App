@@ -723,3 +723,92 @@ class FamilyProfile {
     );
   }
 }
+
+class DailySpiritualContent {
+  final String dateKey;
+  final String hadithText;
+  final String hadithSource;
+  final String hadithNumber;
+  final String duaArabic;
+  final String duaTurkish;
+  final String duaSource;
+  final String morningEveningZikir;
+  final bool isLiveFromOpenSource;
+
+  const DailySpiritualContent({
+    required this.dateKey,
+    required this.hadithText,
+    required this.hadithSource,
+    required this.hadithNumber,
+    required this.duaArabic,
+    required this.duaTurkish,
+    required this.duaSource,
+    required this.morningEveningZikir,
+    this.isLiveFromOpenSource = true,
+  });
+
+  DailySpiritualContent copyWith({
+    String? dateKey,
+    String? hadithText,
+    String? hadithSource,
+    String? hadithNumber,
+    String? duaArabic,
+    String? duaTurkish,
+    String? duaSource,
+    String? morningEveningZikir,
+    bool? isLiveFromOpenSource,
+  }) {
+    return DailySpiritualContent(
+      dateKey: dateKey ?? this.dateKey,
+      hadithText: hadithText ?? this.hadithText,
+      hadithSource: hadithSource ?? this.hadithSource,
+      hadithNumber: hadithNumber ?? this.hadithNumber,
+      duaArabic: duaArabic ?? this.duaArabic,
+      duaTurkish: duaTurkish ?? this.duaTurkish,
+      duaSource: duaSource ?? this.duaSource,
+      morningEveningZikir: morningEveningZikir ?? this.morningEveningZikir,
+      isLiveFromOpenSource: isLiveFromOpenSource ?? this.isLiveFromOpenSource,
+    );
+  }
+}
+
+class ActiveAlarmSession {
+  final ScheduleBlock block;
+  final int currentAttempt;
+  final int maxAttempts;
+  final String selectedToneId; // 'harmonic_chime' | 'classic_alarm' | 'gentle_piano' | 'urgent_pulse'
+  final bool voiceTitleAfterChime;
+  final DateTime triggeredAt;
+  final DateTime? snoozedUntil;
+
+  const ActiveAlarmSession({
+    required this.block,
+    required this.currentAttempt,
+    required this.maxAttempts,
+    this.selectedToneId = 'harmonic_chime',
+    this.voiceTitleAfterChime = false,
+    required this.triggeredAt,
+    this.snoozedUntil,
+  });
+
+  ActiveAlarmSession copyWith({
+    ScheduleBlock? block,
+    int? currentAttempt,
+    int? maxAttempts,
+    String? selectedToneId,
+    bool? voiceTitleAfterChime,
+    DateTime? triggeredAt,
+    DateTime? snoozedUntil,
+  }) {
+    return ActiveAlarmSession(
+      block: block ?? this.block,
+      currentAttempt: currentAttempt ?? this.currentAttempt,
+      maxAttempts: maxAttempts ?? this.maxAttempts,
+      selectedToneId: selectedToneId ?? this.selectedToneId,
+      voiceTitleAfterChime: voiceTitleAfterChime ?? this.voiceTitleAfterChime,
+      triggeredAt: triggeredAt ?? this.triggeredAt,
+      snoozedUntil: snoozedUntil,
+    );
+  }
+}
+
