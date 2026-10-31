@@ -73,7 +73,7 @@ void main() {
     expect(water.totalGoalCups, 10);
   });
 
-  test('VoiceReminderService generates valid polyphonic WAV alarm melodies', () {
+  test('VoiceReminderService generates valid polyphonic WAV alarm melodies and Makam Adhan audio', () {
     final service = VoiceReminderService();
     for (final toneId in VoiceReminderService.alarmToneLabels.keys) {
       final wav = service.generateAlarmMelodyWav(toneId);
@@ -81,6 +81,13 @@ void main() {
       // RIFF header check
       expect(String.fromCharCodes(wav.sublist(0, 4)), 'RIFF');
       expect(String.fromCharCodes(wav.sublist(8, 12)), 'WAVE');
+    }
+
+    for (final styleId in VoiceReminderService.adhanStyleLabels.keys) {
+      final adhanWav = service.generateAdhanMakamWav(styleId);
+      expect(adhanWav.length, greaterThan(44));
+      expect(String.fromCharCodes(adhanWav.sublist(0, 4)), 'RIFF');
+      expect(String.fromCharCodes(adhanWav.sublist(8, 12)), 'WAVE');
     }
   });
 

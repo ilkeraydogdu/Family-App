@@ -121,13 +121,13 @@ class PlannerViewModel extends ChangeNotifier {
     dateKey: '2026-10-30',
     hadithText:
         'Ameller niyetlere göredir. Herkese ancak niyet ettiği şey vardır.',
-    hadithSource: 'Sahîh-i Buhârî, Bed\'ü\'l-Vahy 1 (Açık Kaynak Hadis API)',
+    hadithSource: 'Sahîh-i Buhârî, Bed\'ü\'l-Vahy 1',
     hadithNumber: 'Hadis #1',
     duaArabic:
         'رَبَّنَا هَبْ لَنَا مِنْ أَزْوَاجِنَا وَذُرِّيَّاتِنَا قُرَّةَ أَعْيُنٍ وَاجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا',
     duaTurkish:
         'Rabbimiz! Bize eşlerimizden ve çocuklarımızdan gözümüzün aydınlığı olacak insanlar ihsan et ve bizi, Allah\'a karşı gelmekten sakınanlara önder yap.',
-    duaSource: 'Furkan Suresi, 74. Ayet • Aile & Eş Duası (Diyanet Açık Kaynak)',
+    duaSource: 'Furkan Suresi, 74. Ayet • Aile & Eş Duası',
     morningEveningZikir:
         'Sabah/Akşam Zikri: "Hasbiyallâhu lâ ilâhe illâ hû, aleyhi tevekkeltü ve hüve Rabbü\'l-arşi\'l-azîm." (Tevbe, 129)',
     isLiveFromOpenSource: true,
@@ -140,11 +140,34 @@ class PlannerViewModel extends ChangeNotifier {
   String get selectedAlarmToneId => _voiceService.selectedToneId;
   bool get voiceTitleAfterChime => _voiceService.voiceTitleAfterChime;
 
+  // Dynamic Prayer-Time Adhan (Ezan Vakti Ezan Okuma) State
+  bool _adhanEnabled = true;
+  bool get adhanEnabled => _adhanEnabled;
+
+  final Set<String> _adhanEnabledPrayers = {
+    'Fajr',
+    'Dhuhr',
+    'Asr',
+    'Maghrib',
+    'Isha',
+  };
+  Set<String> get adhanEnabledPrayers => _adhanEnabledPrayers;
+
+  bool isAdhanEnabledForPrayer(String prayerKey) =>
+      _adhanEnabled && _adhanEnabledPrayers.contains(prayerKey);
+
+  String get selectedAdhanStyle => _voiceService.selectedAdhanStyle;
+  String get selectedAdhanStyleLabel =>
+      VoiceReminderService.adhanStyleLabels[selectedAdhanStyle] ??
+      'Mekke • Hicaz Ezan';
+  bool get isAdhanPlaying => _voiceService.isAdhanPlaying;
+
   bool get deviceNotificationsGranted => _notificationService.permissionGranted;
 
   RealtimeChannel? _realtimeChannel;
   Timer? _minuteScheduleWatcher;
   final Set<int> _autoTriggeredBlockIds = {};
+  final Set<String> _autoTriggeredPrayerAdhans = {};
 
   String get formattedSelectedDate =>
       _selectedDate.toIso8601String().substring(0, 10);
@@ -551,6 +574,80 @@ class PlannerViewModel extends ChangeNotifier {
         sendMedicationDeviceNotification(med);
       }
     }
+
+    // Dynamic Prayer-Time Adhan (Ezan Vakti Ezan Okuma) Trigger
+    if (_adhanEnabled) {
+      final prayerCheckMap = <String, (String, String)>{
+        'Fajr': (_prayerTimes.fajr, 'Sabah'),
+        'Dhuhr': (_prayerTimes.dhuhr, 'Öğle'),
+        'Asr': (_prayerTimes.asr, 'İkindi'),
+        'Maghrib': (_prayerTimes.maghrib, 'Akşam'),
+        'Isha': (_prayerTimes.isha, 'Yatsı'),
+      };
+      for (final entry in prayerCheckMap.entries) {
+        final prayerKey = entry.key;
+        final prayerHhmm = entry.value.$1;
+        final prayerLabel = entry.value.$2;
+        final triggerId = '$formattedSelectedDate-$prayerKey-$prayerHhmm';
+        if (_adhanEnabledPrayers.contains(prayerKey) &&
+            prayerHhmm == currentHhmm &&
+            !_autoTriggeredPrayerAdhans.contains(triggerId)) {
+          _autoTriggeredPrayerAdhans.add(triggerId);
+          triggerPrayerAdhanNow(prayerLabel: prayerLabel);
+        }
+      }
+    }
+  }
+
+  void toggleGlobalAdhan(bool enabled) {
+    _adhanEnabled = enabled;
+    if (!enabled && _voiceService.isAdhanPlaying) {
+      unawaited(stopAllVoiceReminders());
+    } else {
+      notifyListeners();
+    }
+  }
+
+  void toggleAdhanForPrayer(String prayerKey) {
+    if (_adhanEnabledPrayers.contains(prayerKey)) {
+      if (_adhanEnabledPrayers.length > 1) {
+        _adhanEnabledPrayers.remove(prayerKey);
+      }
+    } else {
+      _adhanEnabledPrayers.add(prayerKey);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setAdhanStyle(String styleId, {bool previewNow = false}) async {
+    _voiceService.setAdhanStyle(styleId);
+    notifyListeners();
+    if (previewNow) {
+      await triggerPrayerAdhanNow(prayerLabel: 'Vakit');
+    }
+  }
+
+  Future<void> previewOrStopAdhan({String prayerLabel = 'Namaz Vakti'}) async {
+    if (_voiceService.isAdhanPlaying) {
+      await stopAllVoiceReminders();
+      return;
+    }
+    await triggerPrayerAdhanNow(prayerLabel: prayerLabel);
+  }
+
+  Future<void> triggerPrayerAdhanNow({
+    String prayerLabel = 'Namaz Vakti',
+  }) async {
+    final msg = await _voiceService.startAdhanPlayback(
+      prayerName: prayerLabel,
+    );
+    _lastSpokenReminder = msg;
+    notifyListeners();
+    await _notificationService.sendDeviceNotification(
+      id: 7700 + prayerLabel.hashCode.abs() % 200,
+      title: '$prayerLabel Vakti Girdi • Ezan Okunuyor',
+      body: '$selectedAdhanStyleLabel (${_familyProfile.city})',
+    );
   }
 
   Future<bool> requestDeviceNotificationPermissions() async {

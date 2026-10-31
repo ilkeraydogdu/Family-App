@@ -25,7 +25,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
 
   late final TextEditingController _inviteeNameController;
   late final TextEditingController _inviteeEmailController;
-  String _relationshipType = 'Eş / Hayat Arkadaşı';
+  String _relationshipType = 'Eşim';
 
   @override
   void initState() {
@@ -109,7 +109,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                       ),
                       const SizedBox(height: 2),
                       const Text(
-                        'E-posta gizlidir • @kullanici_adi ile güvenli ortak plan ekosistemi',
+                        'Aile, Eş ve Yakın Çevre Ortak Plan Yönetimi',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),
@@ -139,7 +139,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                   Expanded(
                     child: _buildModeTab(
                       index: 0,
-                      label: 'Ortak Eşleşme & Davet',
+                      label: 'Eş & Aile Daveti',
                       svg: AppSvgs.shareInvite,
                     ),
                   ),
@@ -427,7 +427,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
               ),
               SizedBox(height: 6),
               Text(
-                'Sınırsız @kullanici_adi ortak senkronizasyonu, canlı Diyanet namaz hizalama, açık kaynak hadis/dua ana ekran widget\'ları ve polifonik alarm motoru dahildir.',
+                'Sınırsız ortak aile planı, canlı namaz vakti hizalama, ezan vakti bildirimi, ana ekran widget\'ları ve sesli alarm zil sesleri dahildir.',
                 style: TextStyle(
                   fontSize: 11.5,
                   color: Color(0xFF166534),
@@ -554,7 +554,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         ),
         const SizedBox(height: 14),
         const Text(
-          'Eş / Arkadaş Davet Et (Yalnızca Ortak Planları Görür)',
+          'Eş, Aile veya Yakın Davet Et',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
@@ -567,7 +567,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
             Expanded(
               child: TextField(
                 controller: _inviteeNameController,
-                decoration: _inputDecoration('Davet Edilen Üye Adı'),
+                decoration: _inputDecoration('Davet Edilen Kişi Adı'),
               ),
             ),
             const SizedBox(width: 10),
@@ -575,19 +575,19 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
               child: DropdownButtonFormField<String>(
                 initialValue: _relationshipType,
                 isExpanded: true,
-                decoration: _inputDecoration('Bağlantı Tipi'),
+                decoration: _inputDecoration('Yakınlık'),
                 items: const [
                   DropdownMenuItem(
-                    value: 'Eş / Hayat Arkadaşı',
-                    child: Text('Eş / Partner'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Arkadaş / Çalışma Partneri',
-                    child: Text('Arkadaş'),
+                    value: 'Eşim',
+                    child: Text('Eşim'),
                   ),
                   DropdownMenuItem(
                     value: 'Aile Üyesi',
-                    child: Text('Aile Üyesi'),
+                    child: Text('Ailem'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Arkadaşım',
+                    child: Text('Arkadaşım'),
                   ),
                 ],
                 onChanged: (v) {
@@ -602,7 +602,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
           key: const ValueKey('invite_username_field'),
           controller: _inviteeEmailController,
           decoration: _inputDecoration(
-            'Davet Edilecek @kullanici_adi (Örn: @neslihan, @ahmet_yilmaz)',
+            'Kullanıcı Adı (Örn: @neslihan, @ahmet_yilmaz)',
           ),
         ),
         const SizedBox(height: 12),
@@ -619,7 +619,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
               ),
             ),
             child: const Text(
-              '@kullanici_adi İle Ortak Bağlantı Gönder',
+              'Ortak Plan Daveti Gönder',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
@@ -627,7 +627,7 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
         if (invitations.isNotEmpty) ...[
           const SizedBox(height: 16),
           const Text(
-            'Aktif & Bekleyen Ortak Bağlantılar (Duraklat / Kaldır)',
+            'Bağlı Kişiler & Bekleyen Davetler',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,

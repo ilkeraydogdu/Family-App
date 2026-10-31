@@ -68,12 +68,10 @@ class _DailySpiritualCardState extends State<DailySpiritualCard> {
                         color: Colors.white,
                       ),
                     ),
-                    Text(
-                      content.isLiveFromOpenSource
-                          ? 'Buhârî & Diyanet Canlı API'
-                          : 'Günlük Manevi Rehber',
+                    const Text(
+                      'Hadis, Dua & Günlük Zikir',
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         color: Color(0xFF34D399),
                         fontWeight: FontWeight.w600,
@@ -317,7 +315,7 @@ class _SpiritualWidgetCustomizerSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Telefon Ana Ekran Özel Widget\'ları',
+                        'Telefon Ana Ekran Widget\'ları',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -325,7 +323,7 @@ class _SpiritualWidgetCustomizerSheetState
                         ),
                       ),
                       Text(
-                        'Her gün açık kaynaktan çekilen Hadis, Dua ve Namaz vakitlerini telefon ana ekranında gösterir.',
+                        'Günün Hadisi, Duası ve Namaz vakitlerini telefonunuzun ana ekranında gösterir.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),
@@ -400,7 +398,7 @@ class _SpiritualWidgetCustomizerSheetState
                         ? 'NAMAZ VAKİTLERİ • GÜNÜN DUASI & PLAN'
                         : _selectedStyle == 'minimal_quote'
                         ? 'GÜNÜN HADİS-İ ŞERİFİ'
-                        : 'GÜNÜN HADİSİ & DUASI • AÇIK KAYNAK CANLI',
+                        : 'GÜNÜN HADİSİ & DUASI',
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -486,7 +484,7 @@ class _SpiritualWidgetCustomizerSheetState
                       await vm.refreshDailySpiritualFromOpenSource();
                       setState(() {
                         _statusMessage =
-                            'Açık kaynak API üzerinden yeni Hadis-i Şerif ve Kur\'an Duası çekildi.';
+                            'Yeni Hadis-i Şerif ve Günün Duası yüklendi.';
                       });
                     },
                     style: OutlinedButton.styleFrom(

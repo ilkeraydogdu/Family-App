@@ -295,7 +295,7 @@ class _FullScreenAlarmOverlayState extends State<FullScreenAlarmOverlay>
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Alarm Melodisi Seçimi (Polifonik Gerçek Zil)',
+                            'Alarm Zil Sesi Seçimi',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,

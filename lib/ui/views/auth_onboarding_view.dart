@@ -110,7 +110,7 @@ class _AuthOnboardingViewState extends State<AuthOnboardingView> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'E-posta veya telefon paylaşmadan @kullanici_adi ile güvenli üyelik ve ortak plan ekosistemi.',
+                              'Kişisel ajandanız, aile ortak planlarınız ve günlük ibadet takibiniz bir arada.',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: Color(0xFF64748B),

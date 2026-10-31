@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/services/voice_reminder_service.dart';
 import '../../domain/models/family_models.dart';
 import '../core/app_svg_icons.dart';
 import '../view_models/planner_view_model.dart';
@@ -358,7 +359,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                 _openSpiritualWidgetSheet(context, vm),
           ),
           const SizedBox(height: 12),
-          _buildLivePrayerTimesBanner(vm),
+          _buildLivePrayerTimesBanner(context, vm),
           const SizedBox(height: 12),
           _buildQuickHealthSummaryStrip(vm),
           const SizedBox(height: 12),
@@ -578,7 +579,10 @@ class _HomeShellViewState extends State<HomeShellView> {
     return 'Sabah ${p.fajr} (Yarın sabah)';
   }
 
-  Widget _buildLivePrayerTimesBanner(PlannerViewModel vm) {
+  Widget _buildLivePrayerTimesBanner(
+    BuildContext context,
+    PlannerViewModel vm,
+  ) {
     final p = vm.prayerTimes;
     final nextPrayerLabel = _computeNextPrayerSummary(p);
     return Container(
@@ -611,7 +615,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Canlı Namaz Vakitleri (${p.city})',
+                      'Namaz Vakitleri • ${p.city}',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
@@ -632,16 +636,24 @@ class _HomeShellViewState extends State<HomeShellView> {
                 ),
               ),
               TextButton(
-                onPressed: vm.syncAllWithLivePrayerTimes,
+                key: const ValueKey('open_adhan_settings_btn'),
+                onPressed: () => _openAdhanSettingsSheet(context, vm),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF0F766E),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  foregroundColor: const Color(0xFF0F172A),
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: const Text(
-                  'Hizala',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  'Ezan Ayarı',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -657,6 +669,62 @@ class _HomeShellViewState extends State<HomeShellView> {
               _prayerChip(vm, 'Akşam', p.maghrib, prayerKey: 'Maghrib'),
               _prayerChip(vm, 'Yatsı', p.isha, prayerKey: 'Isha'),
             ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                AppSvgIcon(
+                  svgData: AppSvgs.voiceWave,
+                  size: 14,
+                  color: vm.adhanEnabled
+                      ? const Color(0xFF0F766E)
+                      : const Color(0xFF64748B),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    vm.adhanEnabled
+                        ? 'Vakitlerde Ezan: ${vm.selectedAdhanStyleLabel}'
+                        : 'Ezan Sesi Kapalı (Sadece Bildirim)',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                InkWell(
+                  key: const ValueKey('preview_stop_adhan_btn'),
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: () => vm.previewOrStopAdhan(prayerLabel: 'Namaz'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      vm.isAdhanPlaying ? 'Ezanı Durdur' : 'Ezanı Dinle',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: vm.isAdhanPlaying
+                            ? const Color(0xFFB91C1C)
+                            : const Color(0xFF0F766E),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1303,7 +1371,7 @@ class _HomeShellViewState extends State<HomeShellView> {
   }
 
   // ===========================================================================
-  // TAB 2: ORTAK İŞLERİMİZ & PARTNER BAĞLANTISI (@KULLANICI_ADI EKOSİSTEMİ, SIFIR MAİL)
+  // TAB 2: ORTAK İŞLERİMİZ, AİLE & EŞ BAĞLANTILARI
   // ===========================================================================
   Widget _buildSharedPlansAndPartnersTab(
     BuildContext context,
@@ -1311,13 +1379,13 @@ class _HomeShellViewState extends State<HomeShellView> {
   ) {
     final sharedList = vm.sharedBlocksOnly;
     final partnersText = vm.linkedPartnerNames.isEmpty
-        ? 'Aktif Ortak Yok'
+        ? 'Bağlı Kişi Yok'
         : vm.linkedPartnerNames.join(', ');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 36),
       children: [
-        // Membership, Privacy & Partner Connection Card (@username only, zero email!)
+        // Clean, spacious Family & Circle Connection Card
         Container(
           padding: const EdgeInsets.all(16),
           decoration: _minimalCardDecoration(),
@@ -1344,7 +1412,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Ortak Partner: $partnersText (${vm.primaryPartnerHandle})',
+                          'Aile & Eş: $partnersText (${vm.primaryPartnerHandle})',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
@@ -1354,8 +1422,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Üye: ${vm.activeDisplayName} (${vm.activeUsernameHandle}) • Kod: ${vm.familyProfile.inviteCode}',
-                          overflow: TextOverflow.ellipsis,
+                          'Kişisel planlarınız size özeldir, burada yalnızca ortak planlar yer alır.',
                           style: const TextStyle(
                             fontSize: 11.5,
                             color: Color(0xFF64748B),
@@ -1366,39 +1433,9 @@ class _HomeShellViewState extends State<HomeShellView> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(11),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    const AppSvgIcon(
-                      svgData: AppSvgs.shieldLock,
-                      color: Color(0xFF0F766E),
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Sıfır Şahsi Veri & Gizlilik Koruması: E-posta veya telefon numarası asla görünmez. Sizin ${vm.personalBlocksOnly.length} kişisel planınız yalnızca bu cihazda görünür; ${vm.primaryPartnerHandle} ile sadece aşağıdaki ${sharedList.length} ortak plan paylaşılır.',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF334155),
-                          height: 1.35,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Direct Partner Connections Lifecycle Management (Pause / Unlink / Approve / Delete)
+              const SizedBox(height: 14),
               const Text(
-                'Ortak Bağlantı & Partner Yönetimi (@kullanici_adi)',
+                'Bağlı Kişiler & Aile Üyeleri',
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
@@ -1601,7 +1638,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ),
                   ),
                   child: const Text(
-                    '@kullanici_adi İle Partner Davet & Hesap Yönetimi',
+                    'Eş / Aile Davet Et & Hesap Ayarları',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
@@ -1848,8 +1885,8 @@ class _HomeShellViewState extends State<HomeShellView> {
                   children: [
                     Text(
                       vm.deviceNotificationsGranted
-                          ? 'Cihaz Bildirim İzni Aktif (iOS & Android)'
-                          : 'Cihaz Bildirim İzni Bekleniyor',
+                          ? 'Telefon Bildirimleri Aktif'
+                          : 'Bildirim İzni Bekleniyor',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
@@ -1857,7 +1894,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       ),
                     ),
                     const Text(
-                      'İlaç, su ve ders hatırlatmaları doğrudan telefon bildirim merkezine gönderilir',
+                      'İlaç ve su vakitlerinde telefonunuza bildirim gönderilir',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: Color(0xFF64748B),
@@ -3050,7 +3087,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                   items: [
                     DropdownMenuItem(
                       value: vm.primaryPartnerHandle,
-                      child: Text('Eşim / Partnerim (${vm.primaryPartnerHandle})'),
+                      child: Text('Eşim (${vm.primaryPartnerHandle})'),
                     ),
                     DropdownMenuItem(
                       value: vm.activeUsernameHandle,
@@ -3099,4 +3136,298 @@ class _HomeShellViewState extends State<HomeShellView> {
       builder: (_) => SpiritualWidgetCustomizerSheet(viewModel: vm),
     );
   }
+
+  void _openAdhanSettingsSheet(BuildContext context, PlannerViewModel vm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ListenableBuilder(
+        listenable: vm,
+        builder: (ctx, _) {
+          const prayerOptions = [
+            ('Fajr', 'Sabah'),
+            ('Dhuhr', 'Öğle'),
+            ('Asr', 'İkindi'),
+            ('Maghrib', 'Akşam'),
+            ('Isha', 'Yatsı'),
+          ];
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: Material(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const AppSvgIcon(
+                            svgData: AppSvgs.prayerCrescent,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ezan Vakti & Zil Sesi Ayarları',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'Namaz vakitlerinde ezan okuma ve alarm zil sesi tercihleri',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          key: const ValueKey('close_adhan_sheet_btn'),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: const Icon(
+                            Icons.close,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(
+                        'Namaz Vaktinde Ezan Oku',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Seçtiğiniz vakitler girdiğinde telefonunuzda ezan okunur',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      value: vm.adhanEnabled,
+                      onChanged: vm.toggleGlobalAdhan,
+                    ),
+                    if (vm.adhanEnabled) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Ezan Okunacak Vakitler:',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: prayerOptions.map((item) {
+                          final active = vm.adhanEnabledPrayers.contains(
+                            item.$1,
+                          );
+                          return FilterChip(
+                            label: Text(
+                              item.$2,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: active
+                                    ? const Color(0xFF064E3B)
+                                    : const Color(0xFF475569),
+                              ),
+                            ),
+                            selected: active,
+                            selectedColor: const Color(0xFFDCFCE7),
+                            checkmarkColor: const Color(0xFF059669),
+                            onSelected: (_) => vm.toggleAdhanForPrayer(item.$1),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'Ezan Makamı & Vakit Sesi Seçin:',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...VoiceReminderService.adhanStyleLabels.entries.map((e) {
+                        final selected = vm.selectedAdhanStyle == e.key;
+                        return GestureDetector(
+                          onTap: () =>
+                              vm.setAdhanStyle(e.key, previewNow: true),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 11,
+                            ),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? const Color(0xFFF0FDF4)
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFE2E8F0),
+                                width: selected ? 1.5 : 1.0,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                AppSvgIcon(
+                                  svgData: selected
+                                      ? AppSvgs.checkCircle
+                                      : AppSvgs.voiceWave,
+                                  size: 17,
+                                  color: selected
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    e.value,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: selected
+                                          ? const Color(0xFF064E3B)
+                                          : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  selected ? 'Seçili' : 'Seç & Dinle',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: selected
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFF0F766E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                    const Divider(height: 24),
+                    const Text(
+                      'Plan & Ders Alarm Zil Sesi:',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: VoiceReminderService.alarmToneLabels.entries
+                          .map((e) {
+                            final selected = vm.selectedAlarmToneId == e.key;
+                            return ChoiceChip(
+                              label: Text(
+                                e.value,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: selected
+                                      ? Colors.white
+                                      : const Color(0xFF334155),
+                                ),
+                              ),
+                              selected: selected,
+                              selectedColor: const Color(0xFF0F172A),
+                              onSelected: (_) => vm.changeAlarmTone(e.key),
+                            );
+                          })
+                          .toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        key: const ValueKey('sheet_preview_adhan_btn'),
+                        onPressed: () =>
+                            vm.previewOrStopAdhan(prayerLabel: 'Namaz'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: vm.isAdhanPlaying
+                              ? const Color(0xFFB91C1C)
+                              : const Color(0xFF0F766E),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const AppSvgIcon(
+                          svgData: AppSvgs.voiceWave,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        label: Text(
+                          vm.isAdhanPlaying
+                              ? 'Ezan Sesini Durdur'
+                              : 'Seçili Ezan Sesini Dinle',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
 }

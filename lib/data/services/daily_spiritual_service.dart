@@ -11,74 +11,74 @@ class DailySpiritualService {
     'com.ilkeraydogdu.family_app/home_widget',
   );
 
-  // Curated open-source Quranic Dua verses (Furkan 74, Bakara 201, İbrahim 40-41, Taha 114, Al-i İmran 8, İnşirah 5-6, Haşr 10)
+  // Curated Quranic Dua verses (Furkan 74, Bakara 201, İbrahim 40-41, Taha 114, Al-i İmran 8)
   static const List<Map<String, String>> _openSourceDuaRefs = [
     {
       'ayah': '25:74',
-      'label': 'Furkan Suresi, 74. Ayet • Aile & Eş Duası (Diyanet Açık Kaynak)',
+      'label': 'Furkan Suresi, 74. Ayet • Aile & Eş Duası',
       'zikir':
           'Sabah/Akşam Zikri: "Hasbiyallâhu lâ ilâhe illâ hû, aleyhi tevekkeltü ve hüve Rabbü\'l-arşi\'l-azîm." (Tevbe, 129)',
     },
     {
       'ayah': '2:201',
-      'label': 'Bakara Suresi, 201. Ayet • Rabbenâ Âtinâ Duası (Diyanet Açık Kaynak)',
+      'label': 'Bakara Suresi, 201. Ayet • Rabbenâ Âtinâ Duası',
       'zikir':
           'Sabah/Akşam Duası: "Allah\'ım! Senin rahmetini umuyorum, beni göz açıp kapayıncaya kadar bile nefsimle baş başa bırakma." (Ebû Dâvûd, Edeb 101)',
     },
     {
       'ayah': '14:40',
-      'label': 'İbrahim Suresi, 40. Ayet • Namaz & Zürriyet Duası (Diyanet Açık Kaynak)',
+      'label': 'İbrahim Suresi, 40. Ayet • Namaz & Aile Duası',
       'zikir':
           'Sabah Duası: "Allah\'ım! Senden faydalı ilim, temiz rızık ve kabul olunmuş amel dilerim." (İbn Mâce, İkâme 32)',
     },
     {
       'ayah': '20:114',
-      'label': 'Tâhâ Suresi, 114. Ayet • İlim ve Hikmet Duası (Diyanet Açık Kaynak)',
+      'label': 'Tâhâ Suresi, 114. Ayet • İlim ve Hikmet Duası',
       'zikir':
           'Sabah/Akşam Duası: "Yâ Mukallibe\'l-kulûb, sebbit kalbî alâ dînik (Ey kalpleri evirip çeviren Allah\'ım, kalbimi dinin üzere sabit kıl)." (Tirmizî, Deavât 89)',
     },
     {
       'ayah': '3:8',
-      'label': 'Âl-i İmrân Suresi, 8. Ayet • Hidayet ve Rahmet Duası (Diyanet Açık Kaynak)',
+      'label': 'Âl-i İmrân Suresi, 8. Ayet • Hidayet ve Rahmet Duası',
       'zikir':
           'Günün Zikri: "Sübhânallâhi ve bihamdihî, sübhânallâhi\'l-azîm." (Buhârî, Deavât 65)',
     },
   ];
 
-  // Curated open-source Hadith numbers from Sahih-i Buhari Turkish edition (fawazahmed0/hadith-api)
+  // Curated Hadith numbers from Sahih-i Buhari Turkish edition
   static const List<Map<String, dynamic>> _openSourceHadithSeeds = [
     {
       'section': 1,
       'index': 0,
-      'source': 'Sahîh-i Buhârî, Bed\'ü\'l-Vahy 1 (Açık Kaynak Hadis API)',
+      'source': 'Sahîh-i Buhârî, Bed\'ü\'l-Vahy 1',
       'fallback':
           'Ameller niyetlere göredir. Herkese ancak niyet ettiği şey vardır.',
     },
     {
       'section': 2,
       'index': 5,
-      'source': 'Sahîh-i Buhârî, Îmân 6 (Açık Kaynak Hadis API)',
+      'source': 'Sahîh-i Buhârî, Îmân 6',
       'fallback':
           'Sizden biriniz kendisi için istediğini mümin kardeşi için de istemedikçe (kâmil) iman etmiş olmaz.',
     },
     {
       'section': 73,
       'index': 0,
-      'source': 'Sahîh-i Buhârî, Edeb 1 (Açık Kaynak Hadis API)',
+      'source': 'Sahîh-i Buhârî, Edeb 1',
       'fallback':
           'Sizin en hayırlınız, ailesine ve eşine karşı en hayırlı olanınızdır.',
     },
     {
       'section': 8,
       'index': 0,
-      'source': 'Sahîh-i Buhârî, Mevâkîtü\'s-Salât (Açık Kaynak Hadis API)',
+      'source': 'Sahîh-i Buhârî, Mevâkîtü\'s-Salât',
       'fallback':
           'Allah katında en sevimli amel, vaktinde kılınan namaz ve az da olsa devamlı yapılan salih ameldir.',
     },
     {
       'section': 81,
       'index': 0,
-      'source': 'Sahîh-i Buhârî, Rikâk 1 (Açık Kaynak Hadis API)',
+      'source': 'Sahîh-i Buhârî, Rikâk 1',
       'fallback':
           'İki nimet vardır ki insanların çoğu onların kıymetini bilmekte aldanmıştır: Sağlık ve boş vakit.',
     },

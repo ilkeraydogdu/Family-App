@@ -592,13 +592,16 @@ class PartnerInvitation {
   String get relationLabel {
     switch (relationType) {
       case 'friend':
+      case 'Arkadaşım':
+      case 'Arkadaş':
       case 'Arkadaş / Çalışma Partneri':
-        return 'Arkadaş / Çalışma Partneri';
+        return 'Arkadaşım';
       case 'family':
+      case 'Ailem':
       case 'Aile Üyesi':
         return 'Aile Üyesi';
       default:
-        return 'Eş (Ortak Ajanda)';
+        return 'Eşim';
     }
   }
 
@@ -645,8 +648,9 @@ class PartnerInvitation {
 
   Map<String, dynamic> toJson() {
     final dbRelation = switch (relationType) {
-      'Arkadaş / Çalışma Partneri' || 'friend' => 'friend',
-      'Aile Üyesi' || 'family' => 'family',
+      'Arkadaşım' || 'Arkadaş' || 'Arkadaş / Çalışma Partneri' || 'friend' =>
+        'friend',
+      'Ailem' || 'Aile Üyesi' || 'family' => 'family',
       _ => 'spouse',
     };
     return {
