@@ -153,7 +153,10 @@ class DailySpiritualService {
           final rawText = (item['text'] ?? '').toString().trim();
           final rawNum = (item['hadithnumber'] ?? '${idx + 1}').toString();
           if (rawText.isNotEmpty) {
-            hadithText = _extractConciseHadith(rawText);
+            hadithText = _extractConciseHadith(
+              rawText,
+              conciseMatnFallback: hadithMeta['fallback'] as String,
+            );
             hadithNumber = 'Hadis #$rawNum';
             fetchedLive = true;
           }
@@ -176,17 +179,22 @@ class DailySpiritualService {
     );
   }
 
-  String _extractConciseHadith(String raw) {
-    // Strip long isnad chains if present after colon to keep widget & card super readable
+  String _extractConciseHadith(
+    String raw, {
+    required String conciseMatnFallback,
+  }) {
     String cleaned = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (cleaned.length > 260) {
+    if (cleaned.length > 220) {
       final colonIdx = cleaned.lastIndexOf(':');
-      if (colonIdx != -1 && cleaned.length - colonIdx > 55) {
+      if (colonIdx != -1 && cleaned.length - colonIdx > 45) {
         cleaned = cleaned.substring(colonIdx + 1).trim();
       }
     }
-    if (cleaned.length > 280) {
-      cleaned = '${cleaned.substring(0, 277)}...';
+    cleaned = cleaned.replaceAll(RegExp(r'^["“”\s]+|["“”\s]+$'), '').trim();
+    // If the raw API entry is a multi-page narrative (> 240 chars), use its complete concise matn
+    // so sentences are never cut off mid-word with "..."
+    if (cleaned.length > 240 || cleaned.isEmpty) {
+      return conciseMatnFallback;
     }
     return cleaned;
   }

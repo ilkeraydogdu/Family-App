@@ -6,6 +6,7 @@ class BlockEditorSheet extends StatefulWidget {
   final int familyId;
   final String planDate;
   final String personalRoleKey;
+  final bool initialShared;
   final ScheduleBlock? existingBlock;
   final ValueChanged<ScheduleBlock> onSave;
   final VoidCallback? onDelete;
@@ -15,6 +16,7 @@ class BlockEditorSheet extends StatefulWidget {
     required this.familyId,
     required this.planDate,
     this.personalRoleKey = 'husband',
+    this.initialShared = false,
     this.existingBlock,
     required this.onSave,
     this.onDelete,
@@ -52,7 +54,8 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
     _descController = TextEditingController(text: b?.description ?? '');
     _startTimeController = TextEditingController(text: b?.startTime ?? '09:00');
     _endTimeController = TextEditingController(text: b?.endTime ?? '11:00');
-    _ownerRole = b?.ownerRole ?? widget.personalRoleKey;
+    _ownerRole = b?.ownerRole ??
+        (widget.initialShared ? 'shared' : widget.personalRoleKey);
     _category = b?.category ?? 'lesson';
     _isRecurringDaily = b?.isRecurringDaily ?? true;
     _isPrayerAnchored = b?.isPrayerAnchored ?? false;
@@ -209,6 +212,7 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 IconButton(
+                  key: const ValueKey('close_block_editor_btn'),
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close),
                 ),
@@ -280,7 +284,7 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
               key: const ValueKey('block_title_field'),
               controller: _titleController,
               decoration: const InputDecoration(
-                labelText: 'Plan / Ders / Rutin Başlığı (Örn: Gitar Dersi)',
+                labelText: 'Plan / Ders / Rutin Başlığı',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.event_note),
               ),
@@ -320,6 +324,30 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                 () => _ownerRole =
                     val.first ? 'shared' : widget.personalRoleKey,
               ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tekrarlama & Tarih Seçeneği',
+              style: Theme.of(context).textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            SegmentedButton<bool>(
+              segments: [
+                const ButtonSegment(
+                  value: true,
+                  label: Text('Her Gün Tekrarla (Rutin)'),
+                  icon: Icon(Icons.repeat_rounded),
+                ),
+                ButtonSegment(
+                  value: false,
+                  label: Text('Sadece ${widget.planDate}'),
+                  icon: const Icon(Icons.today_rounded),
+                ),
+              ],
+              selected: {_isRecurringDaily},
+              onSelectionChanged: (val) =>
+                  setState(() => _isRecurringDaily = val.first),
             ),
             const SizedBox(height: 14),
             Row(

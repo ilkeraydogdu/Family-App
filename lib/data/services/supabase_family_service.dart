@@ -190,23 +190,17 @@ class SupabaseFamilyService {
   }
 
   /// Fetches ONLY the current member's private personal blocks + shared blocks.
-  /// Enforced both by PostgreSQL RLS (`schedule_blocks_select_policy`) and query filter.
+  /// Enforced both by PostgreSQL RLS (`schedule_blocks_select_policy`) and date filter.
   Future<List<ScheduleBlock>> fetchScheduleBlocks({
     required int familyId,
     required String planDate,
   }) async {
-    final uid = currentUser?.id;
-    var query = _client
+    final rows = await _client
         .from('schedule_blocks')
         .select()
         .eq('family_id', familyId)
-        .or('plan_date.eq.$planDate,is_recurring_daily.eq.true');
-
-    if (uid != null) {
-      query = query.or('owner_role.eq.shared,created_by.eq.$uid');
-    }
-
-    final rows = await query.order('start_time', ascending: true);
+        .or('plan_date.eq.$planDate,is_recurring_daily.eq.true')
+        .order('start_time', ascending: true);
 
     return (rows as List<dynamic>)
         .whereType<Map<String, dynamic>>()

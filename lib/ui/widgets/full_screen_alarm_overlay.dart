@@ -29,7 +29,7 @@ class _FullScreenAlarmOverlayState extends State<FullScreenAlarmOverlay>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
+    )..forward();
   }
 
   @override

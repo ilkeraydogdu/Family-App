@@ -81,7 +81,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${vm.activeDisplayName} (${vm.activeUsernameHandle}) • Ajanda',
+                        '${vm.activeDisplayName} (${vm.activeUsernameHandle})',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 15,
@@ -90,7 +90,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                         ),
                       ),
                       Text(
-                        'Uyanış ${vm.familyProfile.wakeUpTime} • Uyku ${vm.familyProfile.sleepTime} • ${vm.familyProfile.city}',
+                        '${vm.familyProfile.wakeUpTime} - ${vm.familyProfile.sleepTime} • ${vm.familyProfile.city}',
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11,
@@ -207,23 +207,6 @@ class _HomeShellViewState extends State<HomeShellView> {
                     ),
                   ],
                 ),
-          floatingActionButton: _selectedTabIndex <= 1
-              ? FloatingActionButton.extended(
-                  backgroundColor: const Color(0xFF0F172A),
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  onPressed: () => _openBlockEditor(context, vm, null),
-                  icon: const AppSvgIcon(
-                    svgData: AppSvgs.plus,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                  label: const Text(
-                    'Yeni Plan Ekle',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                )
-              : null,
           bottomNavigationBar: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -320,7 +303,7 @@ class _HomeShellViewState extends State<HomeShellView> {
     return RefreshIndicator(
       onRefresh: vm.syncAllWithLivePrayerTimes,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 36),
         children: [
           if (vm.snoozedAlarmSummary != null) ...[
             Container(
@@ -381,6 +364,45 @@ class _HomeShellViewState extends State<HomeShellView> {
           const SizedBox(height: 12),
           _buildSevenDayCalendarStrip(vm),
           const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Saatlik Plan & Rutinlerim',
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              FilledButton.icon(
+                key: const ValueKey('add_schedule_block_btn'),
+                onPressed: () => _openBlockEditor(context, vm, null),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const AppSvgIcon(
+                  svgData: AppSvgs.plus,
+                  color: Colors.white,
+                  size: 14,
+                ),
+                label: const Text(
+                  'Yeni Plan Ekle',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           _buildFilterRow(vm),
           const SizedBox(height: 12),
           if (blocks.isEmpty)
@@ -549,11 +571,11 @@ class _HomeShellViewState extends State<HomeShellView> {
           final hrs = diff ~/ 60;
           final remMins = diff % 60;
           final leftStr = hrs > 0 ? '${hrs}s ${remMins}dk' : '${remMins}dk';
-          return 'Sıradaki: ${entry.$1} ${entry.$2} ($leftStr kaldı)';
+          return '${entry.$1} ${entry.$2} ($leftStr)';
         }
       }
     }
-    return 'Sıradaki: Sabah ${p.fajr} (Yarın sabah uyanış)';
+    return 'Sabah ${p.fajr} (Yarın sabah)';
   }
 
   Widget _buildLivePrayerTimesBanner(PlannerViewModel vm) {
@@ -589,7 +611,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Canlı Diyanet Namaz Vakitleri (${p.city})',
+                      'Canlı Namaz Vakitleri (${p.city})',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
@@ -598,7 +620,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       ),
                     ),
                     Text(
-                      '$nextPrayerLabel • Kılınan: ${vm.completedPrayersToday.length}/5 Vakit (Dokun & İşaretle)',
+                      '$nextPrayerLabel • ${vm.completedPrayersToday.length}/5 Kılındı',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11,
@@ -613,7 +635,9 @@ class _HomeShellViewState extends State<HomeShellView> {
                 onPressed: vm.syncAllWithLivePrayerTimes,
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF0F766E),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: const Text(
                   'Hizala',
@@ -662,15 +686,28 @@ class _HomeShellViewState extends State<HomeShellView> {
         ),
         child: Column(
           children: [
-            Text(
-              isDone ? '$label ✓' : label,
-              style: TextStyle(
-                color: isDone
-                    ? const Color(0xFF15803D)
-                    : const Color(0xFF64748B),
-                fontSize: 10,
-                fontWeight: isDone ? FontWeight.w800 : FontWeight.w500,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isDone
+                        ? const Color(0xFF15803D)
+                        : const Color(0xFF64748B),
+                    fontSize: 10,
+                    fontWeight: isDone ? FontWeight.w800 : FontWeight.w500,
+                  ),
+                ),
+                if (isDone) ...[
+                  const SizedBox(width: 3),
+                  const AppSvgIcon(
+                    svgData: AppSvgs.checkCircle,
+                    size: 10,
+                    color: Color(0xFF15803D),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 2),
             Text(
@@ -733,7 +770,7 @@ class _HomeShellViewState extends State<HomeShellView> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'İlaçlarım: ${vm.takenMedicationCount}/${vm.medicationReminders.length} Tamam',
+                'İlaç: ${vm.takenMedicationCount}/${vm.medicationReminders.length} Alındı',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 12,
@@ -757,25 +794,28 @@ class _HomeShellViewState extends State<HomeShellView> {
   }
 
   Widget _buildFilterRow(PlannerViewModel vm) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _filterPill(vm, 'all', 'Tüm Planlarım (${vm.allBlocks.length})'),
-          const SizedBox(width: 8),
-          _filterPill(
+    return Row(
+      children: [
+        Expanded(
+          child: _filterPill(vm, 'all', 'Tümü (${vm.allBlocks.length})'),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _filterPill(
             vm,
             'personal',
-            'Kişisel Planlarım (${vm.personalBlocksOnly.length})',
+            'Kişisel (${vm.personalBlocksOnly.length})',
           ),
-          const SizedBox(width: 8),
-          _filterPill(
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _filterPill(
             vm,
             'shared',
-            'Ortak İşlerimiz (${vm.sharedBlocksOnly.length})',
+            'Ortak (${vm.sharedBlocksOnly.length})',
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -784,7 +824,8 @@ class _HomeShellViewState extends State<HomeShellView> {
     return GestureDetector(
       onTap: () => vm.setTimelineFilter(value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF0F172A) : Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -792,12 +833,15 @@ class _HomeShellViewState extends State<HomeShellView> {
             color: selected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? Colors.white : const Color(0xFF475569),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? Colors.white : const Color(0xFF475569),
+            ),
           ),
         ),
       ),
@@ -989,21 +1033,6 @@ class _HomeShellViewState extends State<HomeShellView> {
                     text:
                         'Canlı Namaz Vakti (${block.prayerOffsetMinutes == 0 ? "Tam Vakit" : "+${block.prayerOffsetMinutes} dk"})',
                     color: const Color(0xFF0F766E),
-                  ),
-                if (block.status == 'planned')
-                  TextButton(
-                    onPressed: () => vm.shiftBlockByMinutes(block, 15),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF0F766E),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    child: const Text(
-                      '+15 dk Kaydır',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
                   ),
                 if (block.voiceReminderEnabled)
                   _featureTag(
@@ -1286,7 +1315,7 @@ class _HomeShellViewState extends State<HomeShellView> {
         : vm.linkedPartnerNames.join(', ');
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 36),
       children: [
         // Membership, Privacy & Partner Connection Card (@username only, zero email!)
         Container(
@@ -1315,17 +1344,17 @@ class _HomeShellViewState extends State<HomeShellView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Ortak Plan Bağlantısı: $partnersText (${vm.primaryPartnerHandle})',
+                          'Ortak Partner: $partnersText (${vm.primaryPartnerHandle})',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
-                            fontSize: 14.5,
+                            fontSize: 14,
                             color: Color(0xFF0F172A),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Aktif Üye: ${vm.activeDisplayName} (${vm.activeUsernameHandle}) • Ekosistem Kodu: ${vm.familyProfile.inviteCode}',
+                          'Üye: ${vm.activeDisplayName} (${vm.activeUsernameHandle}) • Kod: ${vm.familyProfile.inviteCode}',
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 11.5,
@@ -1444,14 +1473,27 @@ class _HomeShellViewState extends State<HomeShellView> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(
-                                '${inv.partnerDisplayFor(vm.activeUsername)} • ${inv.relationshipType}',
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12.5,
-                                  color: Color(0xFF0F172A),
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    inv.partnerDisplayFor(vm.activeUsername),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12.5,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    inv.relationshipType,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             Container(
@@ -1550,13 +1592,17 @@ class _HomeShellViewState extends State<HomeShellView> {
                   onPressed: () => _openAuthAndInviteModal(context, vm),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0F172A),
-                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 11,
+                      horizontal: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Text(
-                    '@KullanıcıAdı İle Eş / Arkadaş Davet Et & Hesap Yönetimi',
+                    '@kullanici_adi İle Partner Davet & Hesap Yönetimi',
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1583,10 +1629,10 @@ class _HomeShellViewState extends State<HomeShellView> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Ortak Ev, Alışveriş & Eşe Not Panosu (${vm.sharedChoresAndNotes.length})',
+                      'Ortak Ev & Alışveriş (${vm.sharedChoresAndNotes.length})',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF0F172A),
                       ),
@@ -1605,7 +1651,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       size: 14,
                     ),
                     label: const Text(
-                      'Not / Liste Ekle',
+                      'Not Ekle',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1674,7 +1720,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${item.categoryLabel} • Ekleyen: ${item.formattedAuthorHandle} → Sorumlu: ${item.assignedTo}',
+                                '${item.categoryLabel} • Ekleyen: ${item.formattedAuthorHandle} • Sorumlu: ${item.assignedTo}',
                                 style: const TextStyle(
                                   fontSize: 10.5,
                                   color: Color(0xFF64748B),
@@ -1711,10 +1757,37 @@ class _HomeShellViewState extends State<HomeShellView> {
                 '$partnersText İle Ortak Planlarımız (${sharedList.length})',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF0F172A),
                 ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              key: const ValueKey('add_shared_block_btn'),
+              onPressed: () =>
+                  _openBlockEditor(context, vm, null, initialShared: true),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F766E),
+                foregroundColor: Colors.white,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: const AppSvgIcon(
+                svgData: AppSvgs.plus,
+                color: Colors.white,
+                size: 13,
+              ),
+              label: const Text(
+                'Ortak Plan Ekle',
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -1997,11 +2070,11 @@ class _HomeShellViewState extends State<HomeShellView> {
               size: 18,
             ),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Text(
-                'İlaç & Vitamin Hatırlatıcılarım',
+                'İlaç & Vitaminlerim (${meds.length})',
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF0F172A),
@@ -2121,58 +2194,69 @@ class _HomeShellViewState extends State<HomeShellView> {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (med.id != null)
-                TextButton(
-                  onPressed: () => vm.deleteMedicationReminder(med.id!),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                if (med.id != null)
+                  TextButton(
+                    onPressed: () => vm.deleteMedicationReminder(med.id!),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      foregroundColor: const Color(0xFFB91C1C),
+                    ),
+                    child: const Text(
+                      'İlacı Sil',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                TextButton.icon(
+                  onPressed: () => vm.sendMedicationDeviceNotification(med),
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: const Color(0xFFB91C1C),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    foregroundColor: const Color(0xFF0F766E),
                   ),
-                  child: const Text(
-                    'İlacı Sil',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                  icon: const AppSvgIcon(
+                    svgData: AppSvgs.bellNotification,
+                    color: Color(0xFF0F766E),
+                    size: 14,
                   ),
-                ),
-              TextButton.icon(
-                onPressed: () => vm.sendMedicationDeviceNotification(med),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  foregroundColor: const Color(0xFF0F766E),
-                ),
-                icon: const AppSvgIcon(
-                  svgData: AppSvgs.bellNotification,
-                  color: Color(0xFF0F766E),
-                  size: 14,
-                ),
-                label: const Text(
-                  'Cihaza Bildir',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: () => vm.toggleMedicationTaken(med),
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  backgroundColor: med.takenToday
-                      ? const Color(0xFFDCFCE7)
-                      : const Color(0xFF0F172A),
-                  foregroundColor: med.takenToday
-                      ? const Color(0xFF166534)
-                      : Colors.white,
-                ),
-                child: Text(
-                  med.takenToday ? 'İçildi (Tamam)' : 'İçildi İşaretle',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                  label: const Text(
+                    'Cihaza Bildir',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                   ),
                 ),
-              ),
-            ],
+                FilledButton.tonal(
+                  onPressed: () => vm.toggleMedicationTaken(med),
+                  style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    backgroundColor: med.takenToday
+                        ? const Color(0xFFDCFCE7)
+                        : const Color(0xFF0F172A),
+                    foregroundColor: med.takenToday
+                        ? const Color(0xFF166534)
+                        : Colors.white,
+                  ),
+                  child: Text(
+                    med.takenToday ? 'İçildi (Tamam)' : 'İçildi İşaretle',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -2602,8 +2686,9 @@ class _HomeShellViewState extends State<HomeShellView> {
   void _openBlockEditor(
     BuildContext context,
     PlannerViewModel vm,
-    ScheduleBlock? existing,
-  ) {
+    ScheduleBlock? existing, {
+    bool initialShared = false,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2612,6 +2697,7 @@ class _HomeShellViewState extends State<HomeShellView> {
         familyId: vm.familyProfile.id,
         planDate: vm.formattedSelectedDate,
         personalRoleKey: vm.memberRoleKey,
+        initialShared: initialShared,
         existingBlock: existing,
         onSave: vm.saveOrCreateBlock,
         onDelete: existing?.id != null

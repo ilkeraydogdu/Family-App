@@ -54,13 +54,16 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
-      child: SingleChildScrollView(
+    final maxSheetHeight = MediaQuery.of(context).size.height * 0.86;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxSheetHeight),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,9 +125,9 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Mode Segmented Switch
+            // Mode Segmented Switch (Fixed above scroll area)
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
@@ -150,45 +153,57 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            const SizedBox(height: 12),
 
-            if (_statusBanner != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFBBF7D0)),
-                ),
-                child: Row(
-                  children: [
-                    const AppSvgIcon(
-                      svgData: AppSvgs.checkCircle,
-                      size: 18,
-                      color: Color(0xFF15803D),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _statusBanner!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF166534),
+            Flexible(
+              child: ClipRect(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_statusBanner != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFBBF7D0)),
+                          ),
+                          child: Row(
+                            children: [
+                              const AppSvgIcon(
+                                svgData: AppSvgs.checkCircle,
+                                size: 18,
+                                color: Color(0xFF15803D),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _statusBanner!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF166534),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                        const SizedBox(height: 12),
+                      ],
+                      if (_modeIndex == 0)
+                        _buildPartnerInviteSection(context)
+                      else
+                        _buildAccountSection(context),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-            ],
-
-            if (_modeIndex == 0)
-              _buildPartnerInviteSection(context)
-            else
-              _buildAccountSection(context),
+            ),
           ],
         ),
       ),

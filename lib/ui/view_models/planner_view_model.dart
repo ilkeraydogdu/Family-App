@@ -77,7 +77,7 @@ class PlannerViewModel extends ChangeNotifier {
   PrayerTimesDay get prayerTimes => _prayerTimes;
 
   List<ScheduleBlock> _blocks = [];
-  List<ScheduleBlock> get allBlocks => _blocks;
+  List<ScheduleBlock> get allBlocks => _blocksForSelectedDate;
 
   List<FocusSession> _focusSessions = [];
   List<FocusSession> get focusSessions => _focusSessions;
@@ -144,6 +144,7 @@ class PlannerViewModel extends ChangeNotifier {
 
   RealtimeChannel? _realtimeChannel;
   Timer? _minuteScheduleWatcher;
+  final Set<int> _autoTriggeredBlockIds = {};
 
   String get formattedSelectedDate =>
       _selectedDate.toIso8601String().substring(0, 10);
@@ -161,16 +162,20 @@ class PlannerViewModel extends ChangeNotifier {
     );
   }
 
-  /// Blocks already filtered at DB RLS level so ONLY this user's personal blocks
-  /// and 'shared' blocks exist in `_blocks`.
-  List<ScheduleBlock> get filteredBlocks {
+  List<ScheduleBlock> get _blocksForSelectedDate {
     final weekday = _selectedDate.weekday;
-    final dayBlocks = _blocks.where((b) {
+    return _blocks.where((b) {
       if (b.isRecurringDaily) {
         return b.recurrenceDays.isEmpty || b.recurrenceDays.contains(weekday);
       }
       return b.planDate == formattedSelectedDate;
     }).toList();
+  }
+
+  /// Blocks already filtered at DB RLS level so ONLY this user's personal blocks
+  /// and 'shared' blocks exist in `_blocks`.
+  List<ScheduleBlock> get filteredBlocks {
+    final dayBlocks = _blocksForSelectedDate;
 
     if (_timelineFilter == 'personal') {
       return dayBlocks.where((b) => b.ownerRole != 'shared').toList();
@@ -183,11 +188,11 @@ class PlannerViewModel extends ChangeNotifier {
 
   /// Strictly private personal plans belonging ONLY to the logged-in member
   List<ScheduleBlock> get personalBlocksOnly =>
-      _blocks.where((b) => b.ownerRole != 'shared').toList();
+      _blocksForSelectedDate.where((b) => b.ownerRole != 'shared').toList();
 
   /// Shared plans visible to both connected members
   List<ScheduleBlock> get sharedBlocksOnly =>
-      _blocks.where((b) => b.ownerRole == 'shared').toList();
+      _blocksForSelectedDate.where((b) => b.ownerRole == 'shared').toList();
 
   /// Other connected members in the shared group (excluding current user)
   List<String> get linkedPartnerNames {
@@ -226,20 +231,20 @@ class PlannerViewModel extends ChangeNotifier {
   }
 
   int get completedCount =>
-      _blocks.where((b) => b.status == 'completed').length;
+      allBlocks.where((b) => b.status == 'completed').length;
 
   int get checkedInCount =>
-      _blocks.where((b) => b.status == 'checked_in').length;
+      allBlocks.where((b) => b.status == 'checked_in').length;
 
-  int get skippedCount => _blocks.where((b) => b.status == 'skipped').length;
+  int get skippedCount => allBlocks.where((b) => b.status == 'skipped').length;
 
   int get takenMedicationCount =>
       _medicationReminders.where((m) => m.takenToday).length;
 
   double get completionRate {
-    if (_blocks.isEmpty) return 0;
+    if (allBlocks.isEmpty) return 0;
     final doneOrActive = completedCount + checkedInCount;
-    return (doneOrActive / _blocks.length) * 100;
+    return (doneOrActive / allBlocks.length) * 100;
   }
 
   bool isReminderActiveFor(int? blockId) =>
@@ -522,8 +527,11 @@ class PlannerViewModel extends ChangeNotifier {
               (int.tryParse(parts[1]) ?? 0);
           final nowMins = now.hour * 60 + now.minute;
           final diff = startMins - nowMins;
+          final blockId = block.id ?? block.title.hashCode;
           if (diff == block.remindBeforeMinutes &&
+              !_autoTriggeredBlockIds.contains(blockId) &&
               !_voiceService.isReminderActive(block.id)) {
+            _autoTriggeredBlockIds.add(blockId);
             triggerVoiceReminderNow(block);
           }
         }
@@ -864,6 +872,10 @@ class PlannerViewModel extends ChangeNotifier {
   }
 
   Future<void> dismissActiveAlarm() async {
+    final currentBlockId = _activeAlarmSession?.block.id;
+    if (currentBlockId != null) {
+      _autoTriggeredBlockIds.add(currentBlockId);
+    }
     _snoozeWakeTimer?.cancel();
     await _voiceService.stopAll();
     _activeAlarmSession = null;

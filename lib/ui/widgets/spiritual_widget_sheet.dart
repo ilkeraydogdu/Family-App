@@ -60,17 +60,17 @@ class _DailySpiritualCardState extends State<DailySpiritualCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Günün Hadis-i Şerifi & Duası',
+                      'Günün Hadisi & Duası',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
                     Text(
                       content.isLiveFromOpenSource
-                          ? 'Açık Kaynak Canlı API (Buhârî & Diyanet)'
+                          ? 'Buhârî & Diyanet Canlı API'
                           : 'Günlük Manevi Rehber',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -88,7 +88,7 @@ class _DailySpiritualCardState extends State<DailySpiritualCard> {
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF38BDF8),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
+                    horizontal: 8,
                     vertical: 6,
                   ),
                   minimumSize: Size.zero,
@@ -96,17 +96,17 @@ class _DailySpiritualCardState extends State<DailySpiritualCard> {
                 ),
                 child: const Text(
                   'Özel Widget',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 2),
               TextButton(
                 key: const ValueKey('refresh_spiritual_btn'),
                 onPressed: () => vm.refreshDailySpiritualFromOpenSource(),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF94A3B8),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 6,
                     vertical: 6,
                   ),
                   minimumSize: Size.zero,
@@ -121,7 +121,7 @@ class _DailySpiritualCardState extends State<DailySpiritualCard> {
           ),
           const SizedBox(height: 12),
 
-          // Sub-Tab Selector (Hadis | Dua & Ayet | Zikir)
+          // Sub-Tab Selector (Hadis | Dua | Zikir)
           Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
@@ -134,7 +134,7 @@ class _DailySpiritualCardState extends State<DailySpiritualCard> {
                   child: _buildSubTabChip(0, 'Günün Hadisi'),
                 ),
                 Expanded(
-                  child: _buildSubTabChip(1, 'Günün Duası & Ayet'),
+                  child: _buildSubTabChip(1, 'Günün Duası'),
                 ),
                 Expanded(
                   child: _buildSubTabChip(2, 'Sabah/Akşam Zikri'),
@@ -214,19 +214,22 @@ class _DailySpiritualCardState extends State<DailySpiritualCard> {
     return GestureDetector(
       onTap: () => setState(() => _selectedSubTab = index),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF1E293B) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? Colors.white : const Color(0xFF94A3B8),
+        alignment: Alignment.center,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? Colors.white : const Color(0xFF94A3B8),
+            ),
           ),
         ),
       ),
