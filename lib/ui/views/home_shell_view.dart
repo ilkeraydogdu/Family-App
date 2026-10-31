@@ -598,7 +598,7 @@ class _HomeShellViewState extends State<HomeShellView> {
                       ),
                     ),
                     Text(
-                      nextPrayerLabel,
+                      '$nextPrayerLabel • Kılınan: ${vm.completedPrayersToday.length}/5 Vakit (Dokun & İşaretle)',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11,
@@ -626,12 +626,12 @@ class _HomeShellViewState extends State<HomeShellView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _prayerChip('Sabah', p.fajr),
-              _prayerChip('Güneş', p.sunrise),
-              _prayerChip('Öğle', p.dhuhr),
-              _prayerChip('İkindi', p.asr),
-              _prayerChip('Akşam', p.maghrib),
-              _prayerChip('Yatsı', p.isha),
+              _prayerChip(vm, 'Sabah', p.fajr, prayerKey: 'Fajr'),
+              _prayerChip(vm, 'Güneş', p.sunrise),
+              _prayerChip(vm, 'Öğle', p.dhuhr, prayerKey: 'Dhuhr'),
+              _prayerChip(vm, 'İkindi', p.asr, prayerKey: 'Asr'),
+              _prayerChip(vm, 'Akşam', p.maghrib, prayerKey: 'Maghrib'),
+              _prayerChip(vm, 'Yatsı', p.isha, prayerKey: 'Isha'),
             ],
           ),
         ],
@@ -639,34 +639,52 @@ class _HomeShellViewState extends State<HomeShellView> {
     );
   }
 
-  Widget _prayerChip(String label, String time) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
+  Widget _prayerChip(
+    PlannerViewModel vm,
+    String label,
+    String time, {
+    String? prayerKey,
+  }) {
+    final isDone =
+        prayerKey != null && vm.isPrayerCompletedToday(prayerKey);
+    return GestureDetector(
+      onTap: prayerKey != null
+          ? () => vm.togglePrayerCompleted(prayerKey)
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDone ? const Color(0xFFDCFCE7) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDone ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
           ),
-          const SizedBox(height: 2),
-          Text(
-            time,
-            style: const TextStyle(
-              color: Color(0xFF0F172A),
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+        ),
+        child: Column(
+          children: [
+            Text(
+              isDone ? '$label ✓' : label,
+              style: TextStyle(
+                color: isDone
+                    ? const Color(0xFF15803D)
+                    : const Color(0xFF64748B),
+                fontSize: 10,
+                fontWeight: isDone ? FontWeight.w800 : FontWeight.w500,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              time,
+              style: TextStyle(
+                color: isDone
+                    ? const Color(0xFF14532D)
+                    : const Color(0xFF0F172A),
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -972,6 +990,21 @@ class _HomeShellViewState extends State<HomeShellView> {
                         'Canlı Namaz Vakti (${block.prayerOffsetMinutes == 0 ? "Tam Vakit" : "+${block.prayerOffsetMinutes} dk"})',
                     color: const Color(0xFF0F766E),
                   ),
+                if (block.status == 'planned')
+                  TextButton(
+                    onPressed: () => vm.shiftBlockByMinutes(block, 15),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF0F766E),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      '+15 dk Kaydır',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 if (block.voiceReminderEnabled)
                   _featureTag(
                     svg: AppSvgs.bellNotification,
@@ -1153,6 +1186,21 @@ class _HomeShellViewState extends State<HomeShellView> {
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
+                if (block.status == 'planned')
+                  TextButton(
+                    onPressed: () => vm.shiftBlockByMinutes(block, 15),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF0F766E),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      '+15 dk Kaydır',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 if (block.voiceReminderEnabled)
                   TextButton(
                     onPressed: () => vm.triggerVoiceReminderNow(block),
@@ -1513,6 +1561,144 @@ class _HomeShellViewState extends State<HomeShellView> {
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Cupla & TimeTree Benchmark: Shared Household Chores, Shopping & Partner Notes Board
+        Container(
+          padding: const EdgeInsets.all(15),
+          decoration: _minimalCardDecoration(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const AppSvgIcon(
+                    svgData: AppSvgs.noteSummary,
+                    color: Color(0xFF0F766E),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Ortak Ev, Alışveriş & Eşe Not Panosu (${vm.sharedChoresAndNotes.length})',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () =>
+                        _openAddSharedChoreNoteDialog(context, vm),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: const Color(0xFF0F766E),
+                    ),
+                    icon: const AppSvgIcon(
+                      svgData: AppSvgs.plus,
+                      color: Color(0xFF0F766E),
+                      size: 14,
+                    ),
+                    label: const Text(
+                      'Not / Liste Ekle',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (vm.sharedChoresAndNotes.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Market alışverişi, kargo takibi veya eşinize anlık not ekleyin.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                )
+              else
+                ...vm.sharedChoresAndNotes.map((item) {
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: item.isDone
+                          ? const Color(0xFFF0FDF4)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: item.isDone
+                            ? const Color(0xFFBBF7D0)
+                            : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        InkWell(
+                          onTap: () => vm.toggleSharedChoreOrNote(item),
+                          child: Icon(
+                            item.isDone
+                                ? Icons.check_box_rounded
+                                : Icons.check_box_outline_blank_rounded,
+                            size: 20,
+                            color: item.isDone
+                                ? const Color(0xFF15803D)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.title,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
+                                  decoration: item.isDone
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${item.categoryLabel} • Ekleyen: ${item.formattedAuthorHandle} → Sorumlu: ${item.assignedTo}',
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (item.id != null)
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () =>
+                                vm.deleteSharedChoreOrNote(item.id!),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: Color(0xFFB91C1C),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
             ],
           ),
         ),
@@ -2716,6 +2902,105 @@ class _HomeShellViewState extends State<HomeShellView> {
             child: const Text('Kaydet'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openAddSharedChoreNoteDialog(
+    BuildContext context,
+    PlannerViewModel vm,
+  ) {
+    final titleCtrl = TextEditingController();
+    String category = 'shopping';
+    String assignedTo = vm.primaryPartnerHandle;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Ortak Ev, Alışveriş & Eşe Not Ekle'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Not veya İhtiyaç (Örn: Dönüşte süt ve ekmek al)',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: category,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'shopping',
+                      child: Text('Market & Alışveriş'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'note',
+                      child: Text('Eşe Anlık Not / Hatırlatma'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'chore',
+                      child: Text('Ev & Sorumluluk'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'date_idea',
+                      child: Text('Birlikte Etkinlik / Kahvaltı Planı'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => category = v);
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: assignedTo,
+                  decoration: const InputDecoration(
+                    labelText: 'Sorumlu (@kullanici_adi)',
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: vm.primaryPartnerHandle,
+                      child: Text('Eşim / Partnerim (${vm.primaryPartnerHandle})'),
+                    ),
+                    DropdownMenuItem(
+                      value: vm.activeUsernameHandle,
+                      child: Text('Ben (${vm.activeUsernameHandle})'),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'Ortak',
+                      child: Text('Ortak (İkimiz Beraber)'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => assignedTo = v);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('İptal'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (titleCtrl.text.trim().isEmpty) return;
+                vm.addSharedChoreOrNote(
+                  title: titleCtrl.text.trim(),
+                  category: category,
+                  assignedTo: assignedTo,
+                );
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Panoya Ekle'),
+            ),
+          ],
+        ),
       ),
     );
   }

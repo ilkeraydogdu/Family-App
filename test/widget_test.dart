@@ -115,5 +115,33 @@ void main() {
     final paused = inv.copyWith(status: 'paused', sharingPaused: true);
     expect(paused.status, 'paused');
     expect(paused.sharingPaused, isTrue);
+    expect(inv.partnerDisplayFor('ilker'), 'Neslihan (@neslihan)');
+    expect(inv.partnerDisplayFor('neslihan'), 'İlker (@ilker)');
+  });
+
+  test('SharedChoreNote and DailyPrayerLog serialize for competitor-grade family features', () {
+    final chore = SharedChoreNote.fromJson({
+      'id': 1,
+      'family_id': 1,
+      'author_username': 'neslihan',
+      'assigned_to': '@ilker',
+      'category': 'shopping',
+      'title': 'Dönüşte süt ve ekmek al',
+      'is_done': false,
+    });
+    expect(chore.formattedAuthorHandle, '@neslihan');
+    expect(chore.categoryLabel, 'Market & Alışveriş');
+    expect(chore.isDone, isFalse);
+
+    final log = DailyPrayerLog.fromJson({
+      'id': 1,
+      'family_id': 1,
+      'username': 'ilker',
+      'prayer_date': '2026-10-31',
+      'completed_prayers': ['Fajr', 'Dhuhr', 'Asr'],
+    });
+    expect(log.isCompleted('Fajr'), isTrue);
+    expect(log.isCompleted('Maghrib'), isFalse);
+    expect(log.completedPrayers.length, 3);
   });
 }

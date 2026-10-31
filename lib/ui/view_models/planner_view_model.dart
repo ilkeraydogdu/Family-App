@@ -91,6 +91,15 @@ class PlannerViewModel extends ChangeNotifier {
   List<PartnerInvitation> _partnerInvitations = [];
   List<PartnerInvitation> get partnerInvitations => _partnerInvitations;
 
+  List<SharedChoreNote> _sharedChoresAndNotes = [];
+  List<SharedChoreNote> get sharedChoresAndNotes => _sharedChoresAndNotes;
+
+  List<String> _completedPrayersToday = [];
+  List<String> get completedPrayersToday => _completedPrayersToday;
+
+  bool isPrayerCompletedToday(String prayerKey) =>
+      _completedPrayersToday.contains(prayerKey);
+
   bool _isPhoneLockShieldActive = false;
   bool get isPhoneLockShieldActive => _isPhoneLockShieldActive;
 
@@ -465,6 +474,14 @@ class PlannerViewModel extends ChangeNotifier {
     _waterTrackers = await _repository.loadWaterTrackers(_familyProfile.id);
     _partnerInvitations = await _repository.loadPartnerInvitations(
       _familyProfile.id,
+    );
+    _sharedChoresAndNotes = await _repository.loadSharedChoresAndNotes(
+      _familyProfile.id,
+    );
+    _completedPrayersToday = await _repository.loadCompletedPrayers(
+      familyId: _familyProfile.id,
+      username: _activeUsername,
+      prayerDate: formattedSelectedDate,
     );
     _connectedMemberNames = await _repository.loadConnectedMemberNames(
       _familyProfile.id,
@@ -1033,6 +1050,117 @@ class PlannerViewModel extends ChangeNotifier {
       skipReason: '',
     );
     await saveOrCreateBlock(updated);
+  }
+
+  /// Structured Benchmark: 1-tap Replan (+15m / -15m shift when running late)
+  Future<void> shiftBlockByMinutes(ScheduleBlock block, int deltaMinutes) async {
+    String shiftHhMm(String hhmm) {
+      final parts = hhmm.split(':');
+      if (parts.length < 2) return hhmm;
+      final total = ((int.tryParse(parts[0]) ?? 0) * 60 +
+              (int.tryParse(parts[1]) ?? 0) +
+              deltaMinutes)
+          .clamp(0, 23 * 60 + 59);
+      final h = (total ~/ 60).toString().padLeft(2, '0');
+      final m = (total % 60).toString().padLeft(2, '0');
+      return '$h:$m';
+    }
+
+    final updated = block.copyWith(
+      startTime: shiftHhMm(block.startTime),
+      endTime: shiftHhMm(block.endTime),
+    );
+    await saveOrCreateBlock(updated);
+  }
+
+  /// MyWaqt / Pillars Benchmark: Daily 5-Prayer Worship Tracker
+  Future<void> togglePrayerCompleted(String prayerKey) async {
+    final next = List<String>.from(_completedPrayersToday);
+    if (next.contains(prayerKey)) {
+      next.remove(prayerKey);
+    } else {
+      next.add(prayerKey);
+    }
+    _completedPrayersToday = next;
+    notifyListeners();
+    try {
+      _completedPrayersToday = await _repository.saveCompletedPrayers(
+        familyId: _familyProfile.id,
+        username: _activeUsername,
+        prayerDate: formattedSelectedDate,
+        completedPrayers: next,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Namaz çetelesi kaydetme hatası: $e');
+    }
+  }
+
+  /// Cupla / TimeTree Benchmark: Shared Household Chores, Shopping & Partner Notes
+  Future<void> addSharedChoreOrNote({
+    required String title,
+    required String category,
+    required String assignedTo,
+  }) async {
+    try {
+      final created = await _repository.addSharedChoreOrNote(
+        SharedChoreNote(
+          familyId: _familyProfile.id,
+          authorUsername: _activeUsername,
+          assignedTo: assignedTo,
+          category: category,
+          title: title.trim(),
+          isDone: false,
+        ),
+      );
+      _sharedChoresAndNotes.insert(0, created);
+      await _notificationService.sendDeviceNotification(
+        id: (created.id ?? 50) + 6000,
+        title: 'Yeni Ortak Liste Notu (${created.categoryLabel})',
+        body: '${created.formattedAuthorHandle} → ${created.assignedTo}: ${created.title}',
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Ortak liste ekleme hatası: $e');
+    }
+  }
+
+  Future<void> toggleSharedChoreOrNote(SharedChoreNote item) async {
+    try {
+      final updated = await _repository.toggleSharedChoreOrNote(item);
+      final idx = _sharedChoresAndNotes.indexWhere((i) => i.id == updated.id);
+      if (idx >= 0) {
+        _sharedChoresAndNotes[idx] = updated;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Ortak liste durum güncelleme hatası: $e');
+    }
+  }
+
+  Future<void> deleteSharedChoreOrNote(int id) async {
+    try {
+      await _repository.removeSharedChoreOrNote(id);
+      _sharedChoresAndNotes.removeWhere((i) => i.id == id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Ortak liste silme hatası: $e');
+    }
+  }
+
+  /// Apple App Store Guideline 5.1.1(v) & KVKK/GDPR In-App Personal Data Deletion
+  Future<void> purgePersonalAccountAndSignOut() async {
+    _realtimeChannel?.unsubscribe();
+    _minuteScheduleWatcher?.cancel();
+    await _voiceService.stopAll();
+    await _repository.purgePersonalAccountData(_familyProfile.id);
+    _isAuthenticated = false;
+    _blocks = [];
+    _medicationReminders = [];
+    _waterTrackers = [];
+    _sharedChoresAndNotes = [];
+    _completedPrayersToday = [];
+    notifyListeners();
   }
 
   Future<void> addFocusSession(FocusSession session) async {

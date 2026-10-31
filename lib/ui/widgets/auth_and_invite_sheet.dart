@@ -378,6 +378,99 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
             ),
           ),
         ),
+        const SizedBox(height: 16),
+        // Commercial Readiness: Family-App Pro Plan & App Store Guideline 5.1.1(v) Account Deletion
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AppSvgIcon(
+                    svgData: AppSvgs.checkCircle,
+                    size: 16,
+                    color: Color(0xFF15803D),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Family-App Pro • Çift & Aile Paketi Aktif',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF14532D),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Sınırsız @kullanici_adi ortak senkronizasyonu, canlı Diyanet namaz hizalama, açık kaynak hadis/dua ana ekran widget\'ları ve polifonik alarm motoru dahildir.',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF166534),
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFECACA)),
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'KVKK / GDPR & App Store Veri Silme Hakkı',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF991B1B),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Kişisel plan, ilaç ve su verilerinizi sunucudan kalıcı olarak temizler.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFFB91C1C)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await vm.purgePersonalAccountAndSignOut();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFB91C1C),
+                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                  visualDensity: VisualDensity.compact,
+                ),
+                child: const Text(
+                  'Verilerimi Sil',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -558,7 +651,9 @@ class _AuthAndInviteSheetState extends State<AuthAndInviteSheet> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            inv.partnerDisplayFor(vm.activeUsername),
+                            inv.partnerDisplayFor(
+                              widget.viewModel.activeUsername,
+                            ),
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 13,

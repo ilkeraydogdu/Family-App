@@ -911,3 +911,122 @@ class ActiveAlarmSession {
   }
 }
 
+class SharedChoreNote {
+  final int? id;
+  final int familyId;
+  final String authorUsername;
+  final String assignedTo; // '@ilker' | '@neslihan' | 'Ortak'
+  final String category; // 'shopping' | 'chore' | 'note' | 'date_idea'
+  final String title;
+  final bool isDone;
+
+  const SharedChoreNote({
+    this.id,
+    required this.familyId,
+    required this.authorUsername,
+    this.assignedTo = 'Ortak',
+    this.category = 'shopping',
+    required this.title,
+    this.isDone = false,
+  });
+
+  String get formattedAuthorHandle =>
+      authorUsername.startsWith('@') ? authorUsername : '@$authorUsername';
+
+  String get categoryLabel {
+    switch (category) {
+      case 'shopping':
+        return 'Market & Alışveriş';
+      case 'chore':
+        return 'Ev & Sorumluluk';
+      case 'date_idea':
+        return 'Birlikte Etkinlik';
+      default:
+        return 'Eşe Not';
+    }
+  }
+
+  SharedChoreNote copyWith({
+    int? id,
+    int? familyId,
+    String? authorUsername,
+    String? assignedTo,
+    String? category,
+    String? title,
+    bool? isDone,
+  }) {
+    return SharedChoreNote(
+      id: id ?? this.id,
+      familyId: familyId ?? this.familyId,
+      authorUsername: authorUsername ?? this.authorUsername,
+      assignedTo: assignedTo ?? this.assignedTo,
+      category: category ?? this.category,
+      title: title ?? this.title,
+      isDone: isDone ?? this.isDone,
+    );
+  }
+
+  factory SharedChoreNote.fromJson(Map<String, dynamic> json) {
+    return SharedChoreNote(
+      id: (json['id'] as num?)?.toInt(),
+      familyId: (json['family_id'] as num?)?.toInt() ?? 1,
+      authorUsername: (json['author_username'] ?? 'ilker')
+          .toString()
+          .replaceAll('@', ''),
+      assignedTo: (json['assigned_to'] ?? 'Ortak').toString(),
+      category: (json['category'] ?? 'shopping').toString(),
+      title: (json['title'] ?? '').toString(),
+      isDone: json['is_done'] == true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'family_id': familyId,
+      'author_username': authorUsername.replaceAll('@', ''),
+      'assigned_to': assignedTo,
+      'category': category,
+      'title': title,
+      'is_done': isDone,
+    };
+  }
+}
+
+class DailyPrayerLog {
+  final int? id;
+  final int familyId;
+  final String username;
+  final String prayerDate;
+  final List<String> completedPrayers; // ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']
+
+  const DailyPrayerLog({
+    this.id,
+    required this.familyId,
+    required this.username,
+    required this.prayerDate,
+    this.completedPrayers = const [],
+  });
+
+  bool isCompleted(String key) => completedPrayers.contains(key);
+
+  factory DailyPrayerLog.fromJson(Map<String, dynamic> json) {
+    final rawList = json['completed_prayers'];
+    final parsed = <String>[];
+    if (rawList is List) {
+      for (final item in rawList) {
+        parsed.add(item.toString());
+      }
+    }
+    return DailyPrayerLog(
+      id: (json['id'] as num?)?.toInt(),
+      familyId: (json['family_id'] as num?)?.toInt() ?? 1,
+      username: (json['username'] ?? 'ilker').toString(),
+      prayerDate: (json['prayer_date'] ??
+              DateTime.now().toIso8601String().substring(0, 10))
+          .toString(),
+      completedPrayers: parsed,
+    );
+  }
+}
+
+

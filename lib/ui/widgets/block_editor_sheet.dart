@@ -107,6 +107,40 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
     });
   }
 
+  Widget _templateChip({
+    required String label,
+    required String title,
+    required String desc,
+    required String start,
+    required String end,
+    bool prayerAnchored = false,
+    String prayerName = 'Fajr',
+    int prayerOffset = 0,
+    bool phoneLock = false,
+    bool shared = false,
+  }) {
+    return ActionChip(
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+      ),
+      backgroundColor: const Color(0xFFF1F5F9),
+      onPressed: () {
+        setState(() {
+          _titleController.text = title;
+          _descController.text = desc;
+          _startTimeController.text = start;
+          _endTimeController.text = end;
+          _isPrayerAnchored = prayerAnchored;
+          _prayerName = prayerName;
+          _prayerOffsetMinutes = prayerOffset;
+          _phoneLockEnabled = phoneLock;
+          _ownerRole = shared ? 'shared' : widget.personalRoleKey;
+        });
+      },
+    );
+  }
+
   void _submit() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
@@ -180,6 +214,67 @@ class _BlockEditorSheetState extends State<BlockEditorSheet> {
                 ),
               ],
             ),
+            if (widget.existingBlock == null) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Hızlı Rutin Şablonları (Tek Dokunuşla Doldur)',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF475569),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _templateChip(
+                      label: 'Sabah Namazı & Zikir',
+                      title: 'Sabah Namazı & Tesbihat',
+                      desc: 'Canlı Diyanet imsak/sabah vaktine göre hizalı ibadet',
+                      start: '06:00',
+                      end: '06:35',
+                      prayerAnchored: true,
+                      prayerName: 'Fajr',
+                      shared: true,
+                    ),
+                    const SizedBox(width: 6),
+                    _templateChip(
+                      label: 'Servis & İşe Gidiş',
+                      title: 'Servis Yürüyüşü & İşe Gidiş',
+                      desc: 'Sabah namazı sonrası servise yürüyüş ve iş başlangıcı',
+                      start: '06:45',
+                      end: '08:00',
+                      prayerAnchored: true,
+                      prayerName: 'Fajr',
+                      prayerOffset: 45,
+                      shared: false,
+                    ),
+                    const SizedBox(width: 6),
+                    _templateChip(
+                      label: 'Gitar / Özel Ders',
+                      title: 'Gitar Dersi & Pratik',
+                      desc: 'Ders süresi boyunca odak kalkanı ve alt görev kontrolü',
+                      start: '09:00',
+                      end: '11:00',
+                      phoneLock: true,
+                      shared: false,
+                    ),
+                    const SizedBox(width: 6),
+                    _templateChip(
+                      label: 'Akşam Aile & Yemek',
+                      title: 'Akşam Yemeği & Eş Sohbeti',
+                      desc: 'Telefonlar sessizde birlikte kaliteli aile vakti',
+                      start: '19:30',
+                      end: '21:00',
+                      phoneLock: true,
+                      shared: true,
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             TextField(
               key: const ValueKey('block_title_field'),

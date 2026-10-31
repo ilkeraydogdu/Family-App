@@ -1,34 +1,44 @@
-# Family-App (Aile Düzeni, Ortak Ajanda, İlaç & Su Hatırlatıcı)
+# Family-App Pro — Çift & Aile Zaman Bloklama, Ortak Ajanda, Namaz Odaklı Planlama & Yaşam Düzeni (iOS & Android)
 
-Eşlerin ve partnerlerin kendi telefonlarında kişisel hesaplarıyla oturum açarak hem **ortak planlarını** hem de **birbirinden bağımsız kişisel planlarını** gerçek zamanlı yönetebildiği, **yalnızca Android (`android/`) ve iOS (`ios/`)** platformları için optimize edilmiş **Flutter + Supabase** yaşam düzeni uygulaması.
+Eşlerin ve partnerlerin kendi telefonlarında kişisel `@kullanici_adi` hesaplarıyla oturum açarak hem **ortak planlarını, alışveriş/ev sorumluluklarını** hem de **birbirinden tamamen izole kişisel planlarını** gerçek zamanlı yönetebildiği; **Cupla**, **TimeTree**, **Structured**, **MyWaqt** ve **Pillars** standartlarını tek çatı altında birleştiren **Flutter + Supabase** mobil uygulaması.
 
-## Öne Çıkan Özellikler
+---
 
-1. **Kişisel Üyelik (`Üye Ol / Giriş Yap`) ve Eş / Arkadaş Davet Sistemi (`partner_invitations`)**
-   - Her kullanıcı kendi telefonunda bireysel hesabını oluşturabilir veya giriş yapabilir.
-   - Aile davet kodu (`AYDOGDU26`) veya özel davet bağlantısıyla eşini, arkadaşını ya da aile üyesini davet ederek **Ortak Planlar** ve **Bağımsız Kişisel Planlar** oluşturabilir.
+## Global Rakip Analizi & Fark Yaratan Özellikler
 
-2. **İlaç & Vitamin Hatırlatıcı (`medication_reminders`) ve Su Takip Sistemi (`water_trackers`)**
-   - **İlaç Hatırlatıcı:** Günlük ilaç ve takviyeleri (`Omega-3 & D3`, `Magnezyum`, `Demir & Folik Asit` vb.) saat, dozaj ve kullanım şekline (`Aç Karnına`, `Tok Karnına`, `Bol Su İle`) göre takip eder, cihaz bildirimi gönderir.
-   - **Su Hatırlatıcı:** Günlük su hedefi (`2500 ml`), `+250 ml (1 Bardak)` / `+500 ml (Şişe)` hızlı ekleme butonları, ilerleme çubuğu ve periyodik su içme cihaz bildirimi sunar.
+| Özellik / Modül | Cupla / TimeTree | Structured | MyWaqt / Pillars | **Family-App Pro** |
+| :--- | :---: | :---: | :---: | :---: |
+| **Sıfır E-posta / Telefon İfşası (`@kullanici_adi`)** | ❌ | ❌ | ❌ | ✅ (`@ilker`, `@neslihan` ekosistemi) |
+| **PostgreSQL RLS İle Kişisel Plan İzolasyonu** | Kısmi | Tek Kişilik | Tek Kişilik | ✅ (Kişisel planlar diğer üyeye asla görünmez) |
+| **Ortak Bağlantıyı Duraklat / Kaldır / Onayla** | ❌ | ❌ | ❌ | ✅ (`Paylaşımı Duraklat`, `Bağlantıyı Kaldır / Sil`) |
+| **Canlı Diyanet Namaz Vaktine Hizalı Saatlik Bloklar** | ❌ | ❌ | ✅ | ✅ (Sabah namazı, servis ve iş saatleri otomatik kayar) |
+| **5 Vakit Günlük Namaz Eda Çetelesi (`0/5 Vakit`)** | ❌ | ❌ | ✅ | ✅ (`daily_prayer_logs` ile tek dokunuşla vakit işaretleme) |
+| **Açık Kaynak Canlı Hadis & Dua + Ana Ekran Widget** | ❌ | ❌ | Kısmi | ✅ (`Sahîh-i Buhârî` & `Kur'an/Diyanet Meal API` + Native Widget) |
+| **Polifonik Tam Ekran Çalan Saat Alarmı & Snooze** | ❌ | ❌ | ❌ | ✅ (16-bit PCM WAV polifonik melodi + Tam Ekran Alarm) |
+| **+15 dk Akıllı Kaydır (Replan) & Hızlı Şablonlar** | ❌ | ✅ | ❌ | ✅ (Tek dokunuşla `+15 dk Kaydır` ve hazır rutin şablonları) |
+| **Ortak Ev, Alışveriş & Eşe Anlık Not Panosu** | ✅ | ❌ | ❌ | ✅ (`shared_chores_and_notes` gerçek zamanlı ortak pano) |
+| **İlaç & Su Hatırlatıcı + Telefon Kısıtlama Kalkanı** | ❌ | ❌ | ❌ | ✅ (`medication_reminders`, `water_trackers`, `focus_sessions`) |
+| **KVKK / GDPR & App Store 5.1.1(v) Veri Silme** | ✅ | ✅ | ✅ | ✅ (Uygulama içi tek tuşla kişisel veri temizleme) |
 
-3. **Gerçek Cihaz Bildirimleri (`flutter_local_notifications`) ve İzin Yönetimi**
-   - Uygulama içi uyarıların yanı sıra doğrudan **iOS ve Android işletim sistemi bildirim merkezine** (`UNUserNotificationCenter` / Android Notification Channel) bildirim gönderir ve gerekli bildirim/alarm izinlerini ister.
+---
 
-4. **Canlı Diyanet Namaz Vakitleri & Saatlik Ajanda (`schedule_blocks`)**
-   - `05:00` uyanış, canlı Diyanet namaz vakitleri (`Sabah`, `Öğle`, `İkindi`, `Akşam`, `Yatsı`), namaz sonrası servis yürüyüşü (`06:45`), iş başlangıcı (`08:00`) ve gitar dersi (`09:00 - 11:00`) gibi saatlik blokları yönetir.
-   - **"Derse Geldim / Başladım"** seçildiğinde tekrarlayan sesli (Türkçe TTS) ve cihaz bildirimlerini susturur.
-   - Ders sonunda bir sonraki işe geçmeden önce **alt görev tik listesi (`checklist_items`)**, **neler yapıldığı özeti (`completion_notes`)** ve gidilemeyen dersler için **Atlanan Ders Takibi (`skipped`) + Telafi Et** akışı sunar.
+## Mimari & Veritabanı Yapısı (Supabase PostgreSQL + RLS)
 
-5. **Minimal, Göz Yormayan Modern Tasarım & Özel Vektörel SVG İkonlar (`flutter_svg`)**
-   - Emoji kullanılmadan tamamen özel tasarım vektörel SVG ikonlar (`AppSvgIcon`) ve göz yormayan minimal renk paletiyle tasarlanmıştır.
+- **`public.families` & `public.family_members`:** Aile/çift çalışma alanı, `@username` kimlikleri ve `connection_status` (`connected` | `paused` | `removed`).
+- **`public.schedule_blocks`:** Saatlik zaman blokları, canlı namaz vakti çapası (`is_prayer_anchored`, `prayer_name`, `prayer_offset_minutes`), tekrarlayan polifonik alarm ayarları (`remind_before_minutes`, `repeat_count`), alt görev tik listesi (`checklist_items`), ders sonu özeti (`completion_notes`) ve atlama nedeni (`skipReason`).
+- **`public.shared_chores_and_notes`:** Eşler arası ortak market/alışveriş listesi, ev sorumlulukları, birlikte etkinlik fikirleri ve eşe anlık not panosu.
+- **`public.daily_prayer_logs`:** Her üyenin kendi günlük 5 vakit namaz eda takibi (`Fajr`, `Dhuhr`, `Asr`, `Maghrib`, `Isha`).
+- **`public.medication_reminders` & `public.water_trackers`:** Kişisel veya ortak ilaç/vitamin hatırlatıcıları ve günlük su tüketim takibi.
+- **`public.focus_sessions`:** Belirlenen saatlerde telefonu kullanım dışı bırakan (yalnızca gelen aramalara izin veren) odak kalkanı kuralları.
+- **`public.partner_invitations`:** `@kullanici_adi` tabanlı ortak ajanda davetleri, onaylama, geçici paylaşım duraklatma ve bağlantı silme.
 
-6. **Telefon Kısıtlama & Odak Kalkanı (`focus_sessions`)**
-   - Belirlenen saat aralıklarında telefonu kullanım dışı bırakarak yalnızca gelen telefon aramalarına cevap verilmesine izin verir.
+---
 
-## Çalıştırma (Android & iOS)
+## Çalıştırma & Doğrulama (iOS & Android)
 
 ```bash
 flutter pub get
+dart analyze --fatal-infos
+flutter test test/widget_test.dart
 flutter run
 ```

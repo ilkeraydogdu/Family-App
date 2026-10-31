@@ -237,6 +237,54 @@ class PlannerRepository {
     return _supabaseService.deletePartnerInvitation(id);
   }
 
+  // Shared Chores, Shopping & Partner Notes (Cupla / TimeTree Benchmark)
+  Future<List<SharedChoreNote>> loadSharedChoresAndNotes(int familyId) {
+    return _supabaseService.fetchSharedChoresAndNotes(familyId);
+  }
+
+  Future<SharedChoreNote> addSharedChoreOrNote(SharedChoreNote item) {
+    return _supabaseService.createSharedChoreOrNote(item);
+  }
+
+  Future<SharedChoreNote> toggleSharedChoreOrNote(SharedChoreNote item) {
+    return _supabaseService.toggleSharedChoreOrNote(item);
+  }
+
+  Future<void> removeSharedChoreOrNote(int id) {
+    return _supabaseService.deleteSharedChoreOrNote(id);
+  }
+
+  // Daily 5-Prayer Worship Tracker (MyWaqt / Pillars Benchmark)
+  Future<List<String>> loadCompletedPrayers({
+    required int familyId,
+    required String username,
+    required String prayerDate,
+  }) {
+    return _supabaseService.fetchCompletedPrayers(
+      familyId: familyId,
+      username: username,
+      prayerDate: prayerDate,
+    );
+  }
+
+  Future<List<String>> saveCompletedPrayers({
+    required int familyId,
+    required String username,
+    required String prayerDate,
+    required List<String> completedPrayers,
+  }) {
+    return _supabaseService.saveCompletedPrayers(
+      familyId: familyId,
+      username: username,
+      prayerDate: prayerDate,
+      completedPrayers: completedPrayers,
+    );
+  }
+
+  Future<void> purgePersonalAccountData(int familyId) {
+    return _supabaseService.purgePersonalAccountData(familyId);
+  }
+
   RealtimeChannel subscribeToRealtime({
     required int familyId,
     required VoidCallback onChanged,

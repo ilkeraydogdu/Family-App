@@ -456,6 +456,124 @@ class SupabaseFamilyService {
     await _client.from('partner_invitations').delete().eq('id', id);
   }
 
+  // ===========================================================================
+  // SHARED CHORES, SHOPPING & PARTNER NOTES (Cupla / TimeTree Benchmark)
+  // ===========================================================================
+
+  Future<List<SharedChoreNote>> fetchSharedChoresAndNotes(int familyId) async {
+    final rows = await _client
+        .from('shared_chores_and_notes')
+        .select()
+        .eq('family_id', familyId)
+        .order('is_done', ascending: true)
+        .order('id', ascending: false);
+
+    return (rows as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .map(SharedChoreNote.fromJson)
+        .toList();
+  }
+
+  Future<SharedChoreNote> createSharedChoreOrNote(SharedChoreNote item) async {
+    final payload = item.toJson();
+    if (currentUser != null) {
+      payload['created_by'] = currentUser!.id;
+    }
+    final inserted = await _client
+        .from('shared_chores_and_notes')
+        .insert(payload)
+        .select()
+        .single();
+    return SharedChoreNote.fromJson(inserted);
+  }
+
+  Future<SharedChoreNote> toggleSharedChoreOrNote(SharedChoreNote item) async {
+    if (item.id == null) return item;
+    final updated = await _client
+        .from('shared_chores_and_notes')
+        .update({'is_done': !item.isDone})
+        .eq('id', item.id!)
+        .select()
+        .single();
+    return SharedChoreNote.fromJson(updated);
+  }
+
+  Future<void> deleteSharedChoreOrNote(int id) async {
+    await _client.from('shared_chores_and_notes').delete().eq('id', id);
+  }
+
+  // ===========================================================================
+  // DAILY 5-PRAYER WORSHIP TRACKER (MyWaqt / Pillars Benchmark)
+  // ===========================================================================
+
+  Future<List<String>> fetchCompletedPrayers({
+    required int familyId,
+    required String username,
+    required String prayerDate,
+  }) async {
+    final cleanUsername = username.replaceAll('@', '').toLowerCase();
+    final row = await _client
+        .from('daily_prayer_logs')
+        .select()
+        .eq('family_id', familyId)
+        .eq('username', cleanUsername)
+        .eq('prayer_date', prayerDate)
+        .maybeSingle();
+
+    if (row == null) return const [];
+    return DailyPrayerLog.fromJson(row).completedPrayers;
+  }
+
+  Future<List<String>> saveCompletedPrayers({
+    required int familyId,
+    required String username,
+    required String prayerDate,
+    required List<String> completedPrayers,
+  }) async {
+    final cleanUsername = username.replaceAll('@', '').toLowerCase();
+    final payload = <String, dynamic>{
+      'family_id': familyId,
+      'username': cleanUsername,
+      'prayer_date': prayerDate,
+      'completed_prayers': completedPrayers,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (currentUser != null) {
+      payload['user_id'] = currentUser!.id;
+    }
+
+    final saved = await _client
+        .from('daily_prayer_logs')
+        .upsert(payload, onConflict: 'family_id,username,prayer_date')
+        .select()
+        .single();
+    return DailyPrayerLog.fromJson(saved).completedPrayers;
+  }
+
+  /// KVKK / GDPR & Apple App Store Guideline 5.1.1(v) — In-App Account Data Deletion
+  Future<void> purgePersonalAccountData(int familyId) async {
+    final uid = currentUser?.id;
+    if (uid == null) return;
+    await _client
+        .from('schedule_blocks')
+        .delete()
+        .eq('family_id', familyId)
+        .eq('created_by', uid)
+        .neq('owner_role', 'shared');
+    await _client
+        .from('medication_reminders')
+        .delete()
+        .eq('family_id', familyId)
+        .eq('created_by', uid)
+        .neq('owner_role', 'shared');
+    await _client
+        .from('water_trackers')
+        .delete()
+        .eq('family_id', familyId)
+        .eq('user_id', uid);
+    await signOut();
+  }
+
   RealtimeChannel subscribeToFamilyChanges({
     required int familyId,
     required VoidCallback onDataChanged,
@@ -490,6 +608,12 @@ class SupabaseFamilyService {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'partner_invitations',
+          callback: (_) => onDataChanged(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'shared_chores_and_notes',
           callback: (_) => onDataChanged(),
         )
         .subscribe();
